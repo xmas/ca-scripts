@@ -88,31 +88,33 @@ function compareDateVals (pathArray) {
     var elementMap = new Map();
     var http = require('http');
 
+    var promise_call_file = function (resolve, reject) {
+        //dataDir/date/path/store.json
+        options.path = '/push/questions/data/'+element.dataDir+'/'+element.date+'/'+element.path+'/store.json';
+        options.method = 'GET';
+
+        getRequest (options, function(body) {
+            //console.log('resolving: '+JSON.stringify(element)+' '+JSON.stringify(body));
+            storeMap.set(element.date, JSON.parse(body));
+            resolve();
+        });
+    };
+
+    var callFile = function(URLIndex){
+        var element = pathArray[URLIndex];
+        console.log('promising: '+element);
+
+        elementMap.set(element.date, element);
+
+        promises.push(new Promise(promise_call_file));
+
+    };
+
     for (var i=0; i < pathArray.length; i++){
 
-        (function(URLIndex){
-            var element = pathArray[URLIndex];
-            console.log('promising: '+element);
-
-            elementMap.set(element.date, element);
-
-            promises.push(new Promise(function (resolve, reject) {
-                //dataDir/date/path/store.json
-                options.path = '/push/questions/data/'+element.dataDir+'/'+element.date+'/'+element.path+'/store.json';
-                options.method = 'GET';
-
-                getRequest (options, function(body) {
-                    //console.log('resolving: '+JSON.stringify(element)+' '+JSON.stringify(body));
-                    storeMap.set(element.date, JSON.parse(body));
-                    resolve();
-                });
-            }));
-
-        })(i);
+        callFile(i);
 
     }
-
-
 
     Promise.all(promises).then(function() {
 
