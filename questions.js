@@ -90,31 +90,6 @@ function compareDateVals (pathArray) {
 
     for (var i=0; i < pathArray.length; i++){
 
-        // (function(URLIndex){
-        //     var element = pathArray[URLIndex];
-        //     elementMap.set(element.date, element);
-        //     promises.push(new Promise(function (resolve, reject) {
-        //
-        //         //dataDir/date/path/store.json
-        //         options.path = '/push/questions/data/'+element.dataDir+'/'+element.date+'/'+element.path+'/store.json';
-        //         options.method = 'GET';
-        //
-        //         http.request(options, function(res) {
-        //             //console.log('STATUS: ' + res.statusCode);
-        //             //console.log('HEADERS: ' + JSON.stringify(res.headers));
-        //             res.setEncoding('utf8');
-        //             var body = '';
-        //             res.on('data', function(chunk) {
-        //                 body += chunk;
-        //             });
-        //             res.on('end', function() {
-        //                 // body is my JSON file
-        //                 resolve(storeMap.set(element.date, JSON.parse(body)));
-        //             });
-        //         }).end();
-        //     } ) );
-        // })(i);
-
         (function(URLIndex){
             var element = pathArray[URLIndex];
             console.log('promising: '+element);
@@ -155,67 +130,6 @@ function compareDateVals (pathArray) {
     });
 
 }
-//
-// function compareDateVals (pathArray) {
-//
-//     var calls = [];
-//     var storeMap = new Map();
-//     var http = require('http');
-//
-//     console.log('path array: '+JSON.stringify(pathArray, null, 4));
-//
-//     for (var i=0; i < pathArray.length; i++){
-//
-//         (function(URLIndex){
-//
-//         var element = pathArray[URLIndex];
-//
-//         console.log('element '+JSON.stringify(element, null, 4));
-//
-//
-//         calls.push(function(callback) {
-//             console.log('about to promise: '+element.path+' '+element.date);
-//             options.path = '/push/questions/data/'+element.dataDir+'/'+element.date+'/'+element.path+'/store.json';
-//             options.method = 'GET';
-//
-//             http.request(options, function(res) {
-//               //console.log('STATUS: ' + res.statusCode);
-//               //console.log('HEADERS: ' + JSON.stringify(res.headers));
-//               res.setEncoding('utf8');
-//               var body = '';
-//               res.on('data', function(chunk) {
-//                   body += chunk;
-//               });
-//               res.on('end', function() {
-//                   // body is my JSON file
-//                   //callback(body, caller);
-//                   //console.log(body);
-//                   console.log('about to resolve: '+element.path+' '+element.date);
-//                   storeMap.set(element.date, JSON.parse(body));
-//               });
-//             }).end();
-//
-//         });
-//
-// })(i);
-//
-//     }
-//
-//
-//
-//     var async = require('async');
-//     async.parallel(calls, function(err, results) {
-//         console.log('---------PROMISES DONE for path: '+element.path);
-//
-//                // compare the returned files in storeMap
-//                for (var key of storeMap.keys()) {
-//                    console.log('STORE KEY: '+key +' path: '+element.path);
-//                    //console.log(JSON.stringify(storeMap.get(key), null, 4));
-//                }
-//     });
-//
-// }
-
 
 function getRequest (http_options, callback, caller) {
 
