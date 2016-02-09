@@ -74,64 +74,88 @@ function datePathCompare (answers) {
 
     for (var key of dataMap.keys()) {
       console.log('KEY   '+key);
-      compareDateVals(dataMap.get(key));
+      getDateStores(dataMap.get(key));
     }
 
 }
 //
-function compareDateVals (pathArray) {
+function getDateStores (pathArray) {
 
     var Promise = require("bluebird");
 
     var promises = [];
-    var storeMap = new Map();
-    var elementMap = new Map();
+    var stores = [];
+    var elements = [];
     var http = require('http');
 
-    var promise_call_file = function (resolve, reject) {
-        //dataDir/date/path/store.json
-        options.path = '/push/questions/data/'+element.dataDir+'/'+element.date+'/'+element.path+'/store.json';
-        options.method = 'GET';
-
-        getRequest (options, function(body) {
-            //console.log('resolving: '+JSON.stringify(element)+' '+JSON.stringify(body));
-            storeMap.set(element.date, JSON.parse(body));
-            resolve();
-        });
-    };
 
     var callFile = function(URLIndex){
         var element = pathArray[URLIndex];
         console.log('promising: '+element);
+        promises.push(new Promise(function (resolve, reject) {
+            //dataDir/date/path/store.json
+            options.path = '/push/questions/data/'+element.dataDir+'/'+element.date+'/'+element.path+'/store.json';
+            options.method = 'GET';
 
-        elementMap.set(element.date, element);
-
-        promises.push(new Promise(promise_call_file));
-
+            getRequest (options, function(body) {
+                elements.push(element);
+                stores.push(JSON.parse(body));
+                resolve();
+            });
+        }));
     };
 
     for (var i=0; i < pathArray.length; i++){
-
         callFile(i);
-
     }
 
     Promise.all(promises).then(function() {
 
-        console.log('---------PROMISES DONE for  '+pathArray[0].path);
+        ///console.log('---------PROMISES DONE for  '+pathArray[0].path);
 
         // compare the returned files in storeMap
-        for (var key of storeMap.keys()) {
-            var element = elementMap.get(key);
-            console.log('STORE KEY: '+key+'  element: '+JSON.stringify(element));
-
-            console.log(JSON.stringify(storeMap.get(key), null, 4));
-
-        }
+        compare (stores, elements);
 
     });
 
 }
+
+function compare (stores, elements) {
+
+    var last;
+    for (var i = 0 ; i < stores.length; i++) {
+
+        if (last) {
+            var current = stores[i];
+
+            var diff = require('deep-diff');
+
+            // current.data.aggregates[0].value = '6777';
+            // last.data.aggregates[0].value = '56';
+
+            var differences = diff(current, last);
+
+            // var stack = new Error().stack
+            // console.log( stack )
+
+             //console.log(JSON.stringify(current));
+            // console.log(JSON.stringify(last));
+
+
+            console.log('Diff for date: '+elements[i].date +' VS '+elements[i-1].date);
+            console.log(JSON.stringify(differences));
+
+        } else {
+            last = stores[i];
+        }
+
+    }
+}
+
+// console.log('STORE KEY: '+key+'  element: '+JSON.stringify(element));
+// console.log(JSON.stringify(storeMap.get(key), null, 4));
+
+
 
 function getRequest (http_options, callback, caller) {
 
