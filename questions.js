@@ -1,5 +1,4 @@
 var commandLineArgs = require('command-line-args');
-var querystring = require('querystring');
 var moment = require('moment');
 
 var cli = commandLineArgs([
@@ -38,7 +37,7 @@ var options = {
 
 var parser = function parseQuestions (body) {
     var questions = JSON.parse(body);
-    console.log(JSON.stringify(questions, null, 4));
+    //console.log(JSON.stringify(questions, null, 4));
 }
 
 var parserA = function parseAnswers (body, caller) {
@@ -51,7 +50,7 @@ var parserA = function parseAnswers (body, caller) {
 
 function datePathCompare (answers) {
 
-    console.log(JSON.stringify(answers, null, 4));
+//    console.log(JSON.stringify(answers, null, 4));
 
     var dataMap = new Map();
     for (var i = 0; i < answers.length; i++ ) {
@@ -63,9 +62,9 @@ function datePathCompare (answers) {
 
         if (!pathArray) {
             pathArray = [];
-            console.log('new obj for path: '+path);
+        //    console.log('new obj for path: '+path);
         } else {
-            console.log('EXISTING for path: '+path);
+        //    console.log('EXISTING for path: '+path);
         }
 
         pathArray.push(answer);
@@ -91,7 +90,7 @@ function getDateStores (pathArray) {
 
     var callFile = function(URLIndex){
         var element = pathArray[URLIndex];
-        console.log('promising: '+element);
+    //    console.log('promising: '+element);
         promises.push(new Promise(function (resolve, reject) {
             //dataDir/date/path/store.json
             options.path = '/push/questions/data/'+element.dataDir+'/'+element.date+'/'+element.path+'/store.json';
@@ -141,10 +140,15 @@ function compare (stores, elements) {
              //console.log(JSON.stringify(current));
             // console.log(JSON.stringify(last));
 
+            if (differences) {
 
-            console.log('Diff for date: '+elements[i].date +' VS '+elements[i-1].date);
-            console.log(JSON.stringify(differences));
+                // THIS IS WHERE WE MAKE AN INSIGHT.
 
+                console.log('Diff for: '+elements[0].path+' --- '+elements[i].date +' VS '+elements[i-1].date);
+                console.log(JSON.stringify(differences, null, 4));
+
+                //console.log(JSON.stringify(current));
+            }
         } else {
             last = stores[i];
         }
