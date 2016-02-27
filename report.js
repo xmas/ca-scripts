@@ -4,7 +4,10 @@
 
 var jsforce = require('jsforce');
 var fs = require('fs');
+var _ = require('underscore');
 //var _ = require('underscore');
+
+var reports = [];
 
 var conn = new jsforce.Connection({
   // you can change loginUrl to connect to sandbox or prerelease env.
@@ -21,9 +24,12 @@ conn.login('rowanxmas@gmail.com', '111qqqSSS8wDvDVUSsCXWJfMViL5cSgVKx', function
     // console.log("Org ID: " + res.organizationId);
     // ...
 
-    //getReports();
+    getReports();
     //evalMetaData('00O61000002qafS');
-    evalReport('00O61000002qafS');
+    //evalReport('00O61000003tF8P');
+
+
+
 
 });
 
@@ -35,57 +41,187 @@ function evalReport (reportId) {
         if (err) {
             return console.error(err);
         }
+        saveOutput("full.json", JSON.stringify(report));
+        var headers = createColumnHeaders(report);
+        report.headers = headers;
         var groupingsDown = report.groupingsDown.groupings;
-        var answer = evalGrouping(groupingsDown, report.attributes.reportId.replace(" ", ""), report, 0, []);
-        console.log(answer);
-        saveOutput("answers.json", JSON.stringify(answer));
+        var path = [];
+        var path_node = {
+            label : report.attributes.label,
+            value : report.attributes.reportId.replace(" ", "")
+        };
+        path.push(path_node);
+        var insights = evalGrouping(groupingsDown, path, report, 0, []);
+        console.log(insights);
+        saveOutput("insights.json", JSON.stringify(insights));
+
+        createInsights(insights);
     });
 }
 
-function evalGrouping (parentGroup, parentPath, report, level, answer) {
+function createInsights (insights) {
+
+    conn.bulk.load("Insight__c", "insert", insights, function(err, rets) {
+      if (err) { return console.error(err); }
+      for (var i=0; i < rets.length; i++) {
+        if (rets[i].success) {
+          console.log("#" + (i+1) + " loaded successfully, id = " + rets[i].id);
+        } else {
+          console.log("#" + (i+1) + " error occurred, message = " + rets[i].errors.join(', '));
+        }
+      }
+      // ...
+    });
+
+
+}
+
+
+function evalGrouping (parentGroup, path, report, level, insights) {
 
     for (var i = 0; i < parentGroup.length; i++) {
 
         // eval this group
         var group = parentGroup[i];
-        var path = parentPath+'.'+nonNullValue(group.value).replace(" ", "");
-        answer.push(evalData(group, path, report, level));
+        var clone_path = _.clone(path);
+        var path_node = {
+            label : group.label,
+            value : nonNullValue(group.value).replace(" ", "")
+        };
+        clone_path.push(path_node);
+
+        var insight = evalData(group, clone_path, report, level);
+        if (insight != null) {
+            insights.push(insight);
+        }
 
         // eval child groupings
         var childGroup = group.groupings;
-        evalGrouping(childGroup, path, report, level+1, answer);
+        evalGrouping(childGroup, clone_path, report, level+1, insights);
     }
-    return answer;
+    return insights;
 }
 
 function evalData (group, path, report, level) {
-    console.log('path: '+path+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
+    console.log('path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
 
     var keyT = group.key+'!T';
     var data = report.factMap[keyT];
-    var groupingColumnInfo =  groupingColumnInfoForLevel(level, report);
-
-
-    var store = {};
-
-    store.data = data;
-    store.path = path;
-    store.label = group.label;
-    store.value = group.value;
-    store.groupingColumnInfo = groupingColumnInfo;
-    if (data.rows.length > 0) {
-        store.detailColumnInfo = report.reportExtendedMetadata.detailColumnInfo;
+    var count = data.rows.length;
+    if (count === 0) {
+        return;
     }
 
-    saveOutput('store.json', JSON.stringify(store), path);
+    //
+    // var store = {};
+    //
+    // store.data = data;
+    // store.path = path;
+    // store.label = group.label;
+    // store.value = group.value;
+    // store.groupingColumnInfo = groupingColumnInfo;
+    // if (data.rows.length <= 0) {
+    //     return;
+    // }
+    // store.detailColumnInfo = report.reportExtendedMetadata.detailColumnInfo;
+    // console.log(table);
+    // saveOutput('store.json', JSON.stringify(store), path.join("."));
 
-    var answer = {};
-    answer['title'] = path;
-    answer['details'] = 'Found '+data.rows.length + ' objects.';
-    answer['path'] = path;
-    answer['guid'] = '0';
+    // var answer = {};
+    // answer['title'] = path.join(".");
+    // answer['details'] = 'Found '+data.rows.length + ' objects.';
+    // answer['path'] = path.join(".");
+    // answer['guid'] = '0';
+    //
+    // return answer;
+    var insight = {};
 
-    return answer;
+    insight.Data_Source__c = report.attributes.reportName;
+    insight.ReportID__c = report.attributes.reportId;
+
+    var groupInfo =  groupingColumnInfoForLevel(level, report);
+    insight.Long_Name__c = report.reportMetadata.reportType.label+' found ('+ count +') today that match:';
+    insight.Name = report.reportMetadata.reportType.label+' from '+ arrayFromKey(path, "label").join(" : ");
+
+    var table = buildTable(report.headers, data.rows);
+    insight.Table_Data__c = table;
+
+    insight.Details__c = count+' '+report.reportMetadata.reportType.label+' found.';
+
+    // create the parents list
+    insight.Parents__c = '';
+    if (path.length > 1) {
+        // TODO: consider moving the ul tag to the component
+        var parents = '<ul class="slds-list--horizontal slds-has-dividers--right slds-has-inline-block-links">';
+
+        for (var i = 1; i < path.length; i++) {
+            var groupingColumnInfo =  groupingColumnInfoForLevel(i -1, report);
+            console.log(JSON.stringify(groupingColumnInfo));
+            var node = path[i];
+            var dataType = groupingColumnInfo.dataType;
+            var node_li = '<span style="font-weight:700">'+groupingColumnInfo.label+': </span>';
+            if (node.value != null && dataType === "string") {
+                var myRe = /(\d\d\d\d\d)/;
+                var myArray = myRe.exec(node.value);
+                console.log(node.value);
+
+                if (myArray!= null && myArray.length > 0) {
+                    node_li = node_li + '<a href="https://rowan-dev-ed.my.salesforce.com/'+node.value+'">'+node.label+'</a>';
+                }
+            } else {
+                node_li = node_li +node.label
+            }
+        parents = parents + '<li class="slds-list__item" >'+node_li+'</li>';
+        }
+        parents = parents + '</ul>';
+        insight.Parents__c = parents;
+    }
+
+    return insight;
+}
+
+function buildTable (headers, rows) {
+
+    if (rows.length != 0 && headers.length != rows[0].dataCells.length) {
+        console.log("ERROR mismatch in lengths: "+headers+ " --- "+ rows[0].dataCells);
+        return;
+    }
+
+    var html = '<div class="slds"><table class="slds-table slds-table--bordered"><thead> <tr class="slds-text-heading--label">';
+
+    for (var i = 0; i < headers.length; i++) {
+        var header = headers[i];
+        html = html + '<th scope="col"><span class="slds-truncate">';
+        html = html + header;
+        html = html + '</span></th>';
+    }
+    html = html + '  </thead><tbody>';
+
+    for (var i = 0; i < rows.length; i++) {
+        var cells = rows[i].dataCells;
+        html = html + '<tr class="slds-hint-parent">';
+        for (var cell_i = 0; cell_i < cells.length; cell_i++) {
+            var cell = cells[cell_i];
+            var head = headers[cell_i];
+
+            html = html + '<td data-label="'+head+'">';
+            html = html + '<span class="slds-truncate">'+cell.label+'</span></td>';
+
+            //console.log('col: '+head+' label: '+cell.label+' value:'+cell.value);
+        }
+    }
+
+    html = html + '</tbody></table></div>';
+
+    return html;
+}
+
+function arrayFromKey (array, key) {
+    var new_array = [];
+    for (var i = 0; i < array.length; i++) {
+        new_array.push(array[i][key]);
+    }
+    return new_array;
 }
 
 function groupingColumnInfoForLevel (level, report) {
@@ -97,10 +233,27 @@ function groupingColumnInfoForLevel (level, report) {
     }
 }
 
+function createColumnHeaders (report) {
+    // create the array of column headers
+    var detailColumns = report.reportMetadata.detailColumns;
+    var detailColumnInfo = report.reportExtendedMetadata.detailColumnInfo;
+
+    var columns = [];
+    for (var i = 0; i < detailColumns.length; i++) {
+        var detailColumn = detailColumns[i];
+        var info = detailColumnInfo[detailColumn];
+
+        columns.push(info.label);
+    }
+    return columns;
+}
+
+
 function nonNullValue (value) {
-    if (value == null) {
+    if (value === null) {
         value = "Other";
     }
+    //console.log(value);
     return value;
 }
 
@@ -123,20 +276,22 @@ function getReports() {
         console.log("reports length: "+reports.length);
 
         var lines = [];
-        for (var i=0; i < reports.length; i++) {
-            console.log(reports[i].id);
-            console.log(reports[i].name);
-            var line = [reports[i].id, reports[i].name];
-            lines.push(line);
+        for (var i=0; i < 5; i++) {
+            // console.log(reports[i].id);
+            // console.log(reports[i].name);
+            // var line = [reports[i].id, reports[i].name];
+            //lines.push(reports[i].id);
+            evalReport(reports[i].id);
         }
-        saveOutput("out.json", JSON.stringify(lines));
+        //saveOutput("out.json", JSON.stringify(lines));
 
-        var answer = {};
-        answer['title'] = 'Report List';
-        answer['details'] = 'Found '+lines.length + ' reports.';
-        answer['path'] = 'reportList';
-        answer['guid'] = '0';
-        saveOutput("answer.json", JSON.stringify(answer));
+
+        // var answer = {};
+        // answer['title'] = 'Report List';
+        // answer['details'] = 'Found '+lines.length + ' reports.';
+        // answer['path'] = 'reportList';
+        // answer['guid'] = '0';
+        // saveOutput("answer.json", JSON.stringify(answer));
     });
 
 
