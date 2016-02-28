@@ -24,11 +24,18 @@ conn.login('rowanxmas@gmail.com', '111qqqSSS8wDvDVUSsCXWJfMViL5cSgVKx', function
     // console.log("Org ID: " + res.organizationId);
     // ...
 
-    getReports();
+    //getReports();
     //evalMetaData('00O61000002qafS');
     //evalReport('00O61000003gDUyEAM');
 
-
+    // put all the reports we want to eval here
+    evalReport('00O61000003tFLP');
+    // evalReport('[NEXT ONE GOES HERE]');
+    // evalReport('[NEXT ONE GOES HERE]');
+    // evalReport('[NEXT ONE GOES HERE]');
+    // evalReport('[NEXT ONE GOES HERE]');
+    // evalReport('[NEXT ONE GOES HERE]');
+    // evalReport('[NEXT ONE GOES HERE]');
 
 
 });
