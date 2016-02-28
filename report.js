@@ -5,7 +5,7 @@
 var jsforce = require('jsforce');
 var fs = require('fs');
 var _ = require('underscore');
-//var _ = require('underscore');
+var sleep = require('sleep');
 
 var reports = [];
 
@@ -26,7 +26,7 @@ conn.login('rowanxmas@gmail.com', '111qqqSSS8wDvDVUSsCXWJfMViL5cSgVKx', function
 
     getReports();
     //evalMetaData('00O61000002qafS');
-    //evalReport('00O61000003tF8P');
+    //evalReport('00O61000003gDUyEAM');
 
 
 
@@ -52,8 +52,8 @@ function evalReport (reportId) {
         };
         path.push(path_node);
         var insights = evalGrouping(groupingsDown, path, report, 0, []);
-        console.log(insights);
-        saveOutput("insights.json", JSON.stringify(insights));
+        //console.log(insights);
+        //saveOutput("insights.json", JSON.stringify(insights));
 
         createInsights(insights);
     });
@@ -84,6 +84,7 @@ function evalGrouping (parentGroup, path, report, level, insights) {
         // eval this group
         var group = parentGroup[i];
         var clone_path = _.clone(path);
+        console.log('going to nonNullValue: '+group.value );
         var path_node = {
             label : group.label,
             value : nonNullValue(group.value).replace(" ", "")
@@ -147,6 +148,8 @@ function evalData (group, path, report, level) {
     insight.Table_Data__c = table;
 
     insight.Details__c = count+' '+report.reportMetadata.reportType.label+' found.';
+    insight.Report_Type_Label__c = report.reportMetadata.reportType.label;
+    insight.Path__c = arrayFromKey(path, "value").join(".");
 
     // create the parents list
     insight.Parents__c = '';
@@ -167,6 +170,7 @@ function evalData (group, path, report, level) {
 
                 if (myArray!= null && myArray.length > 0) {
                     node_li = node_li + '<a href="https://rowan-dev-ed.my.salesforce.com/'+node.value+'">'+node.label+'</a>';
+                    insight = setAssocForLevel(node.value, node.label, i, insight);
                 }
             } else {
                 node_li = node_li +node.label
@@ -179,6 +183,22 @@ function evalData (group, path, report, level) {
 
     return insight;
 }
+
+function setAssocForLevel (assoc_id, assoc_label, level, insight) {
+    if (level === 1) {
+        insight.AssocID__c = assoc_id;
+        insight.AssocLabel__c = assoc_label;
+    } else if (level === 2) {
+        insight.Assoc2ID__c = assoc_id;
+        insight.AssocLabel2__c = assoc_label;
+    } else if (level === 3) {
+        insight.Assoc3ID__c = assoc_id;
+        insight.AssocLabel3__c = assoc_label;
+    }
+
+    return insight;
+}
+
 
 function buildTable (headers, rows) {
 
@@ -250,8 +270,14 @@ function createColumnHeaders (report) {
 
 
 function nonNullValue (value) {
-    if (value === null) {
-        value = "Other";
+    if ( _.isNull(value)) {
+        console.log('need to repalce a null value of: '+value)
+        var thing = "Other";
+        return thing;
+    }
+
+    if (!_.isString(value)) {
+        return JSON.stringify(value);
     }
     //console.log(value);
     return value;
@@ -276,12 +302,15 @@ function getReports() {
         console.log("reports length: "+reports.length);
 
         var lines = [];
-        for (var i=0; i < 5; i++) {
+        for (var i=0; i < 18; i++) {
             // console.log(reports[i].id);
             // console.log(reports[i].name);
             // var line = [reports[i].id, reports[i].name];
             //lines.push(reports[i].id);
             evalReport(reports[i].id);
+            // if ( i % 5) {
+            //     suspend();
+            // }
         }
         //saveOutput("out.json", JSON.stringify(lines));
 
@@ -297,6 +326,9 @@ function getReports() {
 
 }
 
+function suspend() {
+    sleep.sleep(30000);
+}
 
 
 function saveOutput (filename, output, dir) {
