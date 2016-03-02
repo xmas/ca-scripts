@@ -29,16 +29,28 @@ conn.login('rowanxmas@gmail.com', '111qqqSSS8wDvDVUSsCXWJfMViL5cSgVKx', function
     //evalReport('00O61000003gDUyEAM');
 
     // put all the reports we want to eval here
-    evalReport('00O61000003tFLP');
+    //evalReport('00O61000003tFLP');
     // evalReport('[NEXT ONE GOES HERE]');
     // evalReport('[NEXT ONE GOES HERE]');
     // evalReport('[NEXT ONE GOES HERE]');
     // evalReport('[NEXT ONE GOES HERE]');
     // evalReport('[NEXT ONE GOES HERE]');
     // evalReport('[NEXT ONE GOES HERE]');
-
+    getReportFolder('00l610000011IsoAAE');
 
 });
+
+function getReportFolder (folderID) {
+    conn.query("SELECT Id, Name, Description FROM Report WHERE Ownerid = '"+folderID+"' and Ownerid != null", function(err, result) {
+        if (err) { return console.error(err); }
+            var records =[];
+            for (var i = 0; i < result.records.length; i++) {
+                evalReport(result.records[i].Id);
+                //records.push();
+            }
+            //return records;
+    });
+}
 
 function evalReport (reportId) {
     // execute report synchronously with details option,

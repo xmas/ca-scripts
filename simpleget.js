@@ -21,10 +21,11 @@ conn.login('rowanxmas@gmail.com', '111qqqSSS8wDvDVUSsCXWJfMViL5cSgVKx', function
 function getStuff () {
 
     var records = [];
-    conn.query("SELECT Id, Name FROM Account", function(err, result) {
+    conn.query("SELECT Id, Name, Description FROM Report WHERE Ownerid = '00l610000011IsoAAE' and Ownerid != null", function(err, result) {
         if (err) { return console.error(err); }
         console.log("total : " + result.totalSize);
         console.log("fetched : " + result.records.length);
+        console.log(result.records);
     });
 
 }
