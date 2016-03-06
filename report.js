@@ -25,6 +25,8 @@ conn.on("refresh", function(accessToken, res) {
   // Refresh event will be fired when renewed access token
   // to store it in your storage for next request
   console.log('WE NEED A REFRESH++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++');
+  console.log('Access Token: '+accessToken);
+  console.log('response: '+JSON.stringify(res));
 });
 
 //getReportFolder('00l610000011IsoAAE');
