@@ -5,40 +5,60 @@
 var jsforce = require('jsforce');
 var fs = require('fs');
 var _ = require('underscore');
-var sleep = require('sleep');
+//var sleep = require('sleep');
 
 var reports = [];
 
+var access = JSON.parse(fs.readFileSync('access.json', 'utf8'));
+
 var conn = new jsforce.Connection({
-  // you can change loginUrl to connect to sandbox or prerelease env.
-  //loginUrl : 'https://na34.salesforce.com'
+  oauth2 : {
+      clientId : '3MVG9KI2HHAq33RyVzf6P3tANy00h7i_UBLIzaRsTYhGAmWCY032QIFO7HUs8xgR7xamOsLlVoDp_RljlKMyk',
+      clientSecret : '836401246198509582',
+      redirectUri : 'http://localhost:5000/auth/salesforce/callback'
+  },
+  instanceUrl : access.instanceUrl,
+  accessToken : access.access_token,
+  refreshToken : access.refresh_token
 });
-conn.login('rowanxmas@gmail.com', '111qqqSSS8wDvDVUSsCXWJfMViL5cSgVKx', function(err, res) {
-    if (err) { return console.error(err); }
-    // Now you can get the access token and instance URL information.
-    // Save them to establish connection next time.
-    // console.log('access token: '+conn.accessToken);
-    // console.log('instanceUrl: '+conn.instanceUrl);
-    // // logged in user property
-    // console.log("User ID: " + res.id);
-    // console.log("Org ID: " + res.organizationId);
-    // ...
-
-    //getReports();
-    //evalMetaData('00O61000002qafS');
-    //evalReport('00O61000003gDUyEAM');
-
-    // put all the reports we want to eval here
-    //evalReport('00O61000003tFLP');
-    // evalReport('[NEXT ONE GOES HERE]');
-    // evalReport('[NEXT ONE GOES HERE]');
-    // evalReport('[NEXT ONE GOES HERE]');
-    // evalReport('[NEXT ONE GOES HERE]');
-    // evalReport('[NEXT ONE GOES HERE]');
-    // evalReport('[NEXT ONE GOES HERE]');
-    getReportFolder('00l610000011IsoAAE');
-
+conn.on("refresh", function(accessToken, res) {
+  // Refresh event will be fired when renewed access token
+  // to store it in your storage for next request
+  console.log('WE NEED A REFRESH++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++');
 });
+
+//getReportFolder('00l610000011IsoAAE');
+
+// var conn = new jsforce.Connection({
+//   // you can change loginUrl to connect to sandbox or prerelease env.
+//   //loginUrl : 'https://na34.salesforce.com'
+// });
+// conn.login('rowanxmas@gmail.com', '111qqqSSS8wDvDVUSsCXWJfMViL5cSgVKx', function(err, res) {
+//     if (err) { return console.error(err); }
+//     // Now you can get the access token and instance URL information.
+//     // Save them to establish connection next time.
+//     // console.log('access token: '+conn.accessToken);
+//     // console.log('instanceUrl: '+conn.instanceUrl);
+//     // // logged in user property
+//     // console.log("User ID: " + res.id);
+//     // console.log("Org ID: " + res.organizationId);
+//     // ...
+//
+//     //getReports();
+//     //evalMetaData('00O61000002qafS');
+//     //evalReport('00O61000003gDUyEAM');
+//
+//     // put all the reports we want to eval here
+evalReport('00O61000003tJVN');
+//     // evalReport('[NEXT ONE GOES HERE]');
+//     // evalReport('[NEXT ONE GOES HERE]');
+//     // evalReport('[NEXT ONE GOES HERE]');
+//     // evalReport('[NEXT ONE GOES HERE]');
+//     // evalReport('[NEXT ONE GOES HERE]');
+//     // evalReport('[NEXT ONE GOES HERE]');
+//     getReportFolder('00l610000011IsoAAE');
+//
+// });
 
 function getReportFolder (folderID) {
     conn.query("SELECT Id, Name, Description FROM Report WHERE Ownerid = '"+folderID+"' and Ownerid != null", function(err, result) {
@@ -66,7 +86,7 @@ function evalReport (reportId) {
         var groupingsDown = report.groupingsDown.groupings;
         var path = [];
         var path_node = {
-            label : report.attributes.label,
+            label : report.attributes.reportName,
             value : report.attributes.reportId.replace(" ", "")
         };
         path.push(path_node);
@@ -132,20 +152,20 @@ function evalData (group, path, report, level) {
         return;
     }
 
-    //
-    // var store = {};
-    //
-    // store.data = data;
-    // store.path = path;
-    // store.label = group.label;
-    // store.value = group.value;
-    // store.groupingColumnInfo = groupingColumnInfo;
-    // if (data.rows.length <= 0) {
-    //     return;
-    // }
-    // store.detailColumnInfo = report.reportExtendedMetadata.detailColumnInfo;
-    // console.log(table);
-    // saveOutput('store.json', JSON.stringify(store), path.join("."));
+
+    var store = {};
+
+    store.data = data;
+    store.path = path;
+    store.label = group.label;
+    store.value = group.value;
+    store.groupingColumnInfo = groupingColumnInfo;
+    if (data.rows.length <= 0) {
+        return;
+    }
+    store.detailColumnInfo = report.reportExtendedMetadata.detailColumnInfo;
+    console.log(table);
+    saveOutput('store.json', JSON.stringify(store), arrayFromKey(path, "value").join("."));
 
     // var answer = {};
     // answer['title'] = path.join(".");
@@ -160,9 +180,11 @@ function evalData (group, path, report, level) {
     insight.ReportID__c = report.attributes.reportId;
 
     var groupInfo =  groupingColumnInfoForLevel(level, report);
-    insight.Long_Name__c = report.reportMetadata.reportType.label+' found ('+ count +') today that match:';
-    insight.Name = report.reportMetadata.reportType.label+' from '+ arrayFromKey(path, "label").join(" : ");
+    var typeLabel = report.reportMetadata.reportType.label;
+    var labelPath = arrayFromKey(path, "label").join(" > ");
 
+    insight.Name = '('+ count +') '+typeLabel+' from '+report.attributes.reportName;
+    insight.Long_Name__c = '('+ count +') '+typeLabel+' matching: '+labelPath
     var table = buildTable(report.headers, data.rows);
     insight.Table_Data__c = table;
 
@@ -345,9 +367,9 @@ function getReports() {
 
 }
 
-function suspend() {
-    sleep.sleep(30000);
-}
+// function suspend() {
+//     sleep.sleep(30000);
+// }
 
 
 function saveOutput (filename, output, dir) {
