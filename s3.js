@@ -51,6 +51,13 @@ s3.listBuckets(function(err, data) {
 //   }
 // });
 
+var s3 = new AWS.S3();
+var params = {Bucket: 'current-actions', Key: 'sobjects.json'};
+s3.getSignedUrl('getObject', params, function (err, url) {
+  console.log("The URL is", url);
+});
+
+
 getAccounts();
 
 function getAccounts () {
@@ -64,6 +71,7 @@ function getAccounts () {
         listSObjects(accounts);
     });
 }
+
 
 function listSObjects (objects) {
     for (var i = 0; i < objects.length; i++) {
