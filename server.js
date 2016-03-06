@@ -13,6 +13,7 @@ var oauth2 = new jsforce.OAuth2({
   clientSecret : '836401246198509582',
   redirectUri : 'http://localhost:5000/auth/salesforce/callback'
 });
+//cact-server.herokuapp.com/aura/salesforce/callback
 
 console.log(appId);
 
