@@ -9,9 +9,12 @@ var appId = process.env.APP_ID;
 var oauth2 = new jsforce.OAuth2({
   // you can change loginUrl to connect to sandbox or prerelease env.
   // loginUrl : 'https://test.salesforce.com',
-  clientId : '3MVG9KI2HHAq33RyVzf6P3tANy00h7i_UBLIzaRsTYhGAmWCY032QIFO7HUs8xgR7xamOsLlVoDp_RljlKMyk',
-  clientSecret : '836401246198509582',
-  redirectUri : 'http://localhost:5000/auth/salesforce/callback'
+  clientId : process.env.SFORCE_CLIENT_ID,
+  clientSecret : process.env.SFORCE_SECRET,
+  redirectUri : process.env.SFORCE_CALLBACK
+  // clientId : '3MVG9KI2HHAq33RyVzf6P3tANy00h7i_UBLIzaRsTYhGAmWCY032QIFO7HUs8xgR7xamOsLlVoDp_RljlKMyk',
+  // clientSecret : '836401246198509582',
+  // redirectUri : 'http://localhost:5000/auth/salesforce/callback'
 });
 //cact-server.herokuapp.com/aura/salesforce/callback
 
