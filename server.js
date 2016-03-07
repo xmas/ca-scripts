@@ -45,7 +45,7 @@ app.get('/auth/salesforce/callback' , function(req, res) {
 
 
         pgutil.upsertAccess(access);
-        res.send('SUCCESS');
+        res.send(fs.readFileSync('html/auth_success.html', 'utf8'));
     });
 });
 
