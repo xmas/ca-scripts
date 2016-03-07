@@ -64,8 +64,9 @@ app.listen(app.get('port'), function () {
 
 function upsertAccess(access) {
     pg.connect(process.env.DATABASE_URL, function(err, client, done) {
-        client.query('INSERT INTO sforg VALUES (DEFAULT, '+access.instanceUrl+', '+access.access_token+', '+access.refresh_token+', '+access.userid+', '+access.orgid+')',
-        function(err, result) {
+        var sql = 'INSERT INTO sforg VALUES (DEFAULT, '+access.instanceUrl+', '+access.access_token+', '+access.refresh_token+', '+access.userid+', '+access.orgid+')';
+        console.log(sql);
+        client.query(sql, function(err, result) {
             if (err) {
                 console.log(err);
             } else {
