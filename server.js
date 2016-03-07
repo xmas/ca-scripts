@@ -65,8 +65,7 @@ app.listen(app.get('port'), function () {
 function upsertAccess(access) {
     pg.connect(process.env.DATABASE_URL, function(err, client, done) {
 
-        access.access_token = 'TEST';
-        var sql = 'INSERT INTO sforg (id, instanceurl, access_token, refresh_token, userid, orgid) VALUES (DEFAULT, \''+access.instanceUrl+'\', \''+access.access_token+'\', \''+access.refresh_token+'\', \''+access.userid+'\', \''+access.orgid+'\') ON CONFLICT (orgid, userid, instanceurl) DO UPDATE SET access_token = EXCLUDED.access_token'
+        var sql = 'INSERT INTO sforg (id, instanceurl, access_token, refresh_token, userid, orgid) VALUES (DEFAULT, \''+access.instanceUrl+'\', \''+access.access_token+'\', \''+access.refresh_token+'\', \''+access.userid+'\', \''+access.orgid+'\') ON CONFLICT (orgid) DO UPDATE SET access_token = EXCLUDED.access_token, refresh_token = EXCLUDED.refresh_token';
 
 
         //var sql = 'INSERT INTO sforg VALUES (DEFAULT, \''+access.instanceUrl+'\', \''+access.access_token+'\', \''+access.refresh_token+'\', \''+access.userid+'\', \''+access.orgid+'\')';
