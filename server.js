@@ -64,17 +64,16 @@ app.listen(app.get('port'), function () {
 
 function upsertAccess(access) {
     pg.connect(process.env.DATABASE_URL, function(err, client, done) {
-        client.query(
-            'UPSERT INTO sforg VALUES (DEFAULT, '+access.instanceUrl+', '+access.access_token+', '+access.refresh_token+', '+access.userid+', '+access.orgid+')',
-            function(err, result) {
-                if (err) {
-                    console.log(err);
-                } else {
-                    console.log('row inserted with id: ' + result.rows[0].id);
-                }
-            });
+        client.query('UPSERT INTO sforg VALUES (DEFAULT, '+access.instanceUrl+', '+access.access_token+', '+access.refresh_token+', '+access.userid+', '+access.orgid+')',
+        function(err, result) {
+            if (err) {
+                console.log(err);
+            } else {
+                console.log('row inserted with id: ' + result.rows[0].id);
+            }
         });
-    }
+    });
+}
 
 function saveOutput (filename, output, dir) {
 
