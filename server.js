@@ -43,7 +43,7 @@ app.get('/auth/salesforce/callback' , function(req, res) {
         saveOutput('access.json', JSON.stringify(access), '.');
 
 
-
+        upsertAccess(access);
         res.send('SUCCESS');
     });
 });
