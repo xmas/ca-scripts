@@ -6,7 +6,7 @@ var jsforce = require('jsforce');
 var fs = require('fs');
 var pg = require('pg');
 var _ = require('underscore');
-var pgutil = require('pgutil');
+var pgutil = require('./pgutil.js');
 
 var oauth2 = new jsforce.OAuth2({
   clientId : process.env.SFORCE_CLIENT_ID,

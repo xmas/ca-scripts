@@ -1,3 +1,6 @@
+var pg = require('pg');
+
+
 exports.upsertAccess = function (access) {
     pg.connect(process.env.DATABASE_URL, function(err, client, done) {
 
