@@ -6,6 +6,7 @@ var jsforce = require('jsforce');
 var fs = require('fs');
 var pg = require('pg');
 var _ = require('underscore');
+var pgutil = require('pgutil');
 
 var oauth2 = new jsforce.OAuth2({
   clientId : process.env.SFORCE_CLIENT_ID,
@@ -43,7 +44,7 @@ app.get('/auth/salesforce/callback' , function(req, res) {
         saveOutput('access.json', JSON.stringify(access), '.');
 
 
-        upsertAccess(access);
+        pgutil.upsertAccess(access);
         res.send('SUCCESS');
     });
 });
@@ -61,24 +62,6 @@ app.set('port', process.env.PORT || 5000);
 app.listen(app.get('port'), function () {
     console.log('Proxy server listening on port ' + app.get('port'));
 });
-
-function upsertAccess(access) {
-    pg.connect(process.env.DATABASE_URL, function(err, client, done) {
-
-        var sql = 'INSERT INTO sforg (id, instanceurl, access_token, refresh_token, userid, orgid) VALUES (DEFAULT, \''+access.instanceUrl+'\', \''+access.access_token+'\', \''+access.refresh_token+'\', \''+access.userid+'\', \''+access.orgid+'\') ON CONFLICT (orgid) DO UPDATE SET access_token = EXCLUDED.access_token, refresh_token = EXCLUDED.refresh_token';
-
-
-        //var sql = 'INSERT INTO sforg VALUES (DEFAULT, \''+access.instanceUrl+'\', \''+access.access_token+'\', \''+access.refresh_token+'\', \''+access.userid+'\', \''+access.orgid+'\')';
-        console.log(sql);
-        client.query(sql, function(err, result) {
-            if (err) {
-                console.log(err);
-            } else {
-                console.log('row inserted with id: ' + JSON.stringify(result));
-            }
-        });
-    });
-}
 
 function saveOutput (filename, output, dir) {
 
