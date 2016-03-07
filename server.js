@@ -4,25 +4,14 @@ var request = require('request');
 var bodyParser = require('body-parser');
 var jsforce = require('jsforce');
 var fs = require('fs');
-var appId = process.env.APP_ID;
+var pg = require('pg');
+var _ = require('underscore');
 
 var oauth2 = new jsforce.OAuth2({
-  // you can change loginUrl to connect to sandbox or prerelease env.
-  // loginUrl : 'https://test.salesforce.com',
   clientId : process.env.SFORCE_CLIENT_ID,
   clientSecret : process.env.SFORCE_SECRET,
   redirectUri : process.env.SFORCE_CALLBACK
-  // clientId : '3MVG9KI2HHAq33RyVzf6P3tANy00h7i_UBLIzaRsTYhGAmWCY032QIFO7HUs8xgR7xamOsLlVoDp_RljlKMyk',
-  // clientSecret : '836401246198509582',
-  // redirectUri : 'http://localhost:5000/auth/salesforce/callback'
 });
-//cact-server.herokuapp.com/aura/salesforce/callback
-
-console.log(appId);
-
-//app.use(bodyParser.json());
-//app.use(express.static(__dirname + '/client'));
-
 
 app.get('/appid', function(req, res) {
     res.send({appId: appId});
@@ -53,6 +42,8 @@ app.get('/auth/salesforce/callback' , function(req, res) {
         console.log(JSON.stringify(access));
         saveOutput('access.json', JSON.stringify(access), '.');
 
+
+
         res.send('SUCCESS');
     });
 });
@@ -70,6 +61,22 @@ app.set('port', process.env.PORT || 5000);
 app.listen(app.get('port'), function () {
     console.log('Proxy server listening on port ' + app.get('port'));
 });
+
+function upsertAccess(access) {
+  pg.connect(process.env.DATABASE_URL, function(err, client, done) {
+      client.query(
+          'UPSERT INTO sforg VALUES (DEFAULT, '+access.instanceUrl+', '+access.access_token+', '+access.refresh_token+', '+access.userid+', '+access.orgid+')',
+          function(err, result) {
+              if (err) {
+                  console.log(err);
+              } else {
+                  console.log('row inserted with id: ' + result.rows[0].id);
+              }
+
+          });
+      });
+  });
+})
 
 function saveOutput (filename, output, dir) {
 
