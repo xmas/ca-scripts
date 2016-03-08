@@ -35,8 +35,6 @@ function getSFConnection (access) {
         pgutil.upsertAccess(access);
     });
 
-
-    console.log('new SF Connection: '+conn);
-
+    
     return conn;
 }

@@ -13,17 +13,24 @@ var _ = require('underscore');
 
 var conn = {};
 
-function evalReportFolder (folderID, sfconn) {
+function evalReportFolder (sfconn, folderName) {
     conn = sfconn;
-    conn.query("SELECT Id, Name, Description FROM Report WHERE Ownerid = '"+folderID+"' and Ownerid != null", function(err, result) {
+    folderName = _.isUndefined(folderName) ? 'Current Actions' : folderName;
+
+    conn.query("SELECT Id, Name FROM Folder WHERE Name = '"+folderName+"'",
+    function(err, result) {
         if (err) { return console.error(err); }
+        var folderID = result.records[0].Id;
+        conn.query("SELECT Id, Name, Description FROM Report WHERE Ownerid = '"+folderID+"' and Ownerid != null", function(err, result) {
+            if (err) { return console.error(err); }
             var records =[];
             for (var i = 0; i < result.records.length; i++) {
-                console.log('evalReport: '+result.records[i].Id);
+                //console.log('evalReport: '+result.records[i].Id);
                 evalReport(result.records[i].Id, conn);
                 //records.push();
             }
             //return records;
+        });
     });
 }
 

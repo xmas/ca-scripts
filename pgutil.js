@@ -29,10 +29,7 @@ function upsertAccess (access, done) {
 
 function orgAccessList(cb) {
     pg.connect(process.env.DATABASE_URL, function(err, client, done) {
-
         var sql = 'SELECT * FROM sforg';
-
-        console.log('THE SQL:'+sql);
         client.query(sql, function(err, result) {
             if (err) {
                 console.log('ERROR FROM POSTGRES: '+err);
