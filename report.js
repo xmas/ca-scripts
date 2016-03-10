@@ -133,7 +133,7 @@ function evalData (group, path, report, level) {
     }
     store.detailColumnInfo = report.reportExtendedMetadata.detailColumnInfo;
     console.log(table);
-    saveOutput('store.json', JSON.stringify(store), arrayFromKey(path, "value").join("."));
+    saveOutput('store.json', JSON.stringify(store), arrayFromKey(path, "value").join("/"));
 
     // var answer = {};
     // answer['title'] = path.join(".");
