@@ -3,6 +3,7 @@
 var pgutil = require('./pgutil.js');
 var report = require('./report.js');
 var sfutil = require('./sfutil.js');
+var s3 = require('./s3.js');
 
 if (typeof(process.env.SFORCE_CLIENT_ID) === 'undefined') {
     require('dotenv').config();
@@ -14,9 +15,10 @@ pgutil.orgAccessList(function(results) {
     for (var i = 0; i < orgs.length; i++) {
         var access = orgs[i];
         console.log('get connection to org: '+access.orgid);
-        var conn = sfutil.getSFConnection(access);
+        //var conn = sfutil.getSFConnection(access);
         //report.evalReport('00O61000003tJVN', conn);
-        report.evalReportFolder(conn);
+        //report.evalReportFolder(conn);
+        s3.ensureBucket(access.orgid.toLowerCase());
 
     }
 
