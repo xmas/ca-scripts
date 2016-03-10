@@ -158,7 +158,7 @@ function evalData (group, path, report, level) {
 
     insight.Details__c = count+' '+report.reportMetadata.reportType.label+' found.';
     insight.Report_Type_Label__c = report.reportMetadata.reportType.label;
-    insight.Path__c = arrayFromKey(path, "value").join(".");
+    insight.Path__c = arrayFromKey(path, "value").join("/");
 
     // create the parents list
     insight.Parents__c = '';
