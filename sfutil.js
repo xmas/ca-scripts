@@ -8,6 +8,8 @@ module.exports = {
 var jsforce = require('jsforce');
 var fs = require('fs');
 var _ = require('underscore');
+var pgutil = require('./pgutil.js');
+
 
 function getSFConnection (access) {
 
@@ -35,6 +37,6 @@ function getSFConnection (access) {
         pgutil.upsertAccess(access);
     });
 
-    
+
     return conn;
 }

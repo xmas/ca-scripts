@@ -10,11 +10,14 @@ var sfutil = require('./sfutil.js');
 var jsforce = require('jsforce');
 var fs = require('fs');
 var _ = require('underscore');
+var s3 = require('./s3.js');
 
 var conn = {};
+var access = {};
 
-function evalReportFolder (sfconn, folderName) {
+function evalReportFolder (folderName, sfacess, sfconn, callback) {
     conn = sfconn;
+    access = sfacess;
     folderName = _.isUndefined(folderName) ? 'Current Actions' : folderName;
 
     conn.query("SELECT Id, Name FROM Folder WHERE Name = '"+folderName+"'",
@@ -26,7 +29,7 @@ function evalReportFolder (sfconn, folderName) {
             var records =[];
             for (var i = 0; i < result.records.length; i++) {
                 //console.log('evalReport: '+result.records[i].Id);
-                evalReport(result.records[i].Id, conn);
+                evalReport(result.records[i].Id, access, conn, callback);
                 //records.push();
             }
             //return records;
@@ -34,8 +37,9 @@ function evalReportFolder (sfconn, folderName) {
     });
 }
 
-function evalReport (reportId, sfconn) {
+function evalReport (reportId, sfacesss, sfconn, callback) {
     conn = sfconn;
+    access = sfacesss;
 
     // execute report synchronously with details option,
     // to get detail rows in execution result.
@@ -336,8 +340,21 @@ function getReports() {
 // }
 
 
-function saveOutput (filename, output, dir) {
+function saveOutput (filename, output, dir, callback) {
 
+    if (access) {
+        // we have an access object so we'll use S3
+
+        if (dir) {
+            filename = dir+'/'+filename;
+        }
+
+        s3.uploadObject(access.orgid, filename, output, function(result) {
+            console.log(result);
+        });
+
+        return;
+    }
 
     if (dir && !fs.existsSync(dir)){
         fs.mkdirSync(dir);
