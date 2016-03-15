@@ -131,9 +131,20 @@ function evalData (group, path, report, level) {
     if (data.rows.length <= 0) {
         return;
     }
-    store.detailColumnInfo = report.reportExtendedMetadata.detailColumnInfo;
-    console.log(table);
-    saveOutput('store.json', JSON.stringify(store), arrayFromKey(path, "value").join("/"));
+
+    var header_order = report.reportMetadata.detailColumns;
+    var header_data = report.reportExtendedMetadata.detailColumnInfo;
+    var headers = [];
+    for (var header_index = 0; header_index < header_order.length; header_index++) {
+        var header_key = header_order[header_index];
+        console.log('header key: '+header_key);
+        headers.push(header_data[header_key]);
+    }
+    store.headers = headers;
+
+    var saveToS3 = true;
+    saveOutput('store.json', JSON.stringify(store), path, saveToS3);
+
 
     // var answer = {};
     // answer['title'] = path.join(".");
@@ -152,7 +163,7 @@ function evalData (group, path, report, level) {
     var labelPath = arrayFromKey(path, "label").join(" > ");
 
     insight.Name = '('+ count +') '+typeLabel+' from '+report.attributes.reportName;
-    insight.Long_Name__c = '('+ count +') '+typeLabel+' matching: '+labelPath
+    //insight.Long_Name__c = '('+ count +') '+typeLabel+' matching: '+labelPath
     var table = buildTable(report.headers, data.rows);
     insight.Table_Data__c = table;
 
@@ -162,36 +173,69 @@ function evalData (group, path, report, level) {
 
     // create the parents list
     insight.Parents__c = '';
+
+    // new or changed Leads where product interest is SLA: Gold and industry is Agriculture.
+
+    // new or changed [Report_Type_Label__c] where [PATH Label [2]] is [Path Value [2]] and [PATH Label [3]] is [Path Value [3]].
+
+    var long_title = 'Found ('+count+') new or changed <span class="sobject-link">'+report.reportMetadata.reportType.label+'</span>';
+
+
     if (path.length > 1) {
-        // TODO: consider moving the ul tag to the component
-        var parents = '<ul class="slds-list--horizontal slds-has-dividers--right slds-has-inline-block-links">';
+
+        long_title = long_title+' where '
+        var parents = "";
+        //'<ul class="slds-list--horizontal slds-has-dividers--right slds-has-inline-block-links">';
 
         for (var i = 1; i < path.length; i++) {
             var groupingColumnInfo =  groupingColumnInfoForLevel(i -1, report);
             console.log(JSON.stringify(groupingColumnInfo));
             var node = path[i];
             var dataType = groupingColumnInfo.dataType;
-            var node_li = '<span style="font-weight:700">'+groupingColumnInfo.label+': </span>';
+            var node_li = '<span class="sobject-link">'+groupingColumnInfo.label+': </span>';
+            if (i > 1) {
+                if ( i > 2) {
+                    long_title = long_title + ' and ';
+                }
+                long_title = long_title + groupingColumnInfo.label.toLowerCase()+' is <span class="sobject-link"> ';
+            }
             if (node.value != null && dataType === "string") {
                 var myRe = /(\d\d\d\d\d)/;
                 var myArray = myRe.exec(node.value);
                 console.log(node.value);
 
                 if (myArray!= null && myArray.length > 0) {
-                    node_li = node_li + '<a href="https://rowan-dev-ed.my.salesforce.com/'+node.value+'">'+node.label+'</a>';
-                    insight = setAssocForLevel(node.value, node.label, i, insight);
+                    node_li = node_li + '<a href="https://rowan-dev-ed.my.salesforce.com/'+node.value+'" class="sobject-link">'+node.label+'</a>';
+                    if (i > 1) {
+                        long_title = long_title +  '<a href="https://rowan-dev-ed.my.salesforce.com/'+node.value+'">'+node.label+'</a></span>'
+                    }
+                    setAssocForLevel(node.value, node.label, i, insight);
+                } else {
+                    node_li = node_li +node.label +'</span>';
+                    if (i > 1) {
+                        long_title = long_title +node.label +'</span>';
+                    }
                 }
             } else {
-                node_li = node_li +node.label
+                node_li = node_li +node.label + +'</span>';
+                if (i > 1) {
+                    long_title = long_title +node.label +'</span>';
+                }
             }
         parents = parents + '<li class="slds-list__item" >'+node_li+'</li>';
         }
-        parents = parents + '</ul>';
+        //parents = parents + '</ul>';
         insight.Parents__c = parents;
     }
 
+    long_title = long_title +'.';
+
+    insight.Long_Name__c = long_title;
+    console.log("Parents: "+insight.Parents__c);
+
     return insight;
 }
+
 
 function setAssocForLevel (assoc_id, assoc_label, level, insight) {
     if (level === 1) {
@@ -204,8 +248,6 @@ function setAssocForLevel (assoc_id, assoc_label, level, insight) {
         insight.Assoc3ID__c = assoc_id;
         insight.AssocLabel3__c = assoc_label;
     }
-
-    return insight;
 }
 
 
@@ -340,11 +382,19 @@ function getReports() {
 // }
 
 
-function saveOutput (filename, output, dir, callback) {
+function saveOutput (filename, output, path, saveToS3, callback) {
+
+    if (path) {
+        var dir = "";
+        if (access && saveToS3 ) {
+            dir = arrayFromKey(path, "value").join("/");
+        } else {
+            dir = arrayFromKey(path, "value").join(".");
+        }
+    }
 
     if (access) {
         // we have an access object so we'll use S3
-
         if (dir) {
             filename = dir+'/'+filename;
         }
@@ -356,9 +406,13 @@ function saveOutput (filename, output, dir, callback) {
         return;
     }
 
-    if (dir && !fs.existsSync(dir)){
-        fs.mkdirSync(dir);
-        filename = dir+'/'+filename;
+    // if (dir && !fs.existsSync(dir)){
+    //     fs.mkdirSync(dir);
+    //     filename = dir+'/'+filename;
+    // }
+
+    if (dir) {
+        filename = dir+'.'+filename;
     }
 
     fs.writeFile(filename, output, function(err) {
