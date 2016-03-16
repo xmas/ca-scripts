@@ -17,3 +17,15 @@ Supporting app for [this workshop module](http://ccoenraets.github.io/salesforce
      - For **Callback URL**, specify: https://my-conference.herokuapp.com/oauthcallback.html
 
      > Replace **my-conference** with your own app name.
+
+
+     xcode-select --install
+  117  brew uninstall pkg-config cairo libpng jpeg giflib
+  118  brew install pkg-config cairo libpng jpeg giflib
+  119  npm install canvas
+  120  brew install pkg-config cairo libpng jpeg giflib
+  121  brew link libpng fontconfig
+  122  sudo chmod 777 /usr/local/share/man/man5
+  123  brew link libpng fontconfig
+  124  brew install pkg-config cairo libpng jpeg giflib
+  125  npm install canvas

@@ -174,6 +174,13 @@ function evalData (group, path, report, level) {
     // create the parents list
     insight.Parents__c = '';
 
+    var count_history = [];
+    for (var hi = 0; hi < getRandomInt(1000,10000); hi++) {
+        count_history.push(getRandomInt(5,100));
+    }
+    count_history.push(count);
+    insight.Chart__c = JSON.stringify(count_history);
+
     // new or changed Leads where product interest is SLA: Gold and industry is Agriculture.
 
     // new or changed [Report_Type_Label__c] where [PATH Label [2]] is [Path Value [2]] and [PATH Label [3]] is [Path Value [3]].
@@ -236,6 +243,9 @@ function evalData (group, path, report, level) {
     return insight;
 }
 
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
+}
 
 function setAssocForLevel (assoc_id, assoc_label, level, insight) {
     if (level === 1) {

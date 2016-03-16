@@ -20,11 +20,11 @@ pgutil.orgAccessList(function(results) {
         //report.evalReportFolder(conn);
         s3.ensureBucket(access.orgid, function() {
 
-            report.evalReportFolder('Current Actions', access, conn, function (result) {
+            report.evalReportFolder('Current Actions', null, conn, function (result) {
                  console.log('in worker.js we evalled a folder');
                  console.log(result);
              });
-        
+
 
 
             // console.log('eval report 00O61000003tJVN');
