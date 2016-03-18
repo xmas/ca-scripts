@@ -13,7 +13,6 @@ var _ = require('underscore');
 var fs = require('fs');
 
 awsConfig();
-//uploadPie('current-actions');
 function awsConfig() {
     if (typeof(process.env.AWS_ACCESS_KEY_ID) === 'undefined') {
         require('dotenv').config();
