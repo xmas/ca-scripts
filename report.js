@@ -246,7 +246,7 @@ function evalData (group, path, report, level, callback) {
     // console.log('BACK IN REPORTS');
 
     if ((data.rows.length <= 0) || (count === 0)) {
-        // do nothing;
+        callback(); // If we miss a callback then bad things happen since the entire callback chain gets fudged
     } else {
         s3.getVersion(access.orgid.toString(), arrayFromKey(path, "value").join("/"), 2, function (data) {
 
