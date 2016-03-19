@@ -20,16 +20,16 @@ pgutil.orgAccessList(function(results) {
         s3.ensureBucket(access.orgid, function() {
 
 
-            // report.evalReport('00O61000003tGWS', access, conn, insights, function (results) {
-            //     console.log('back in workder.js, and we have tons of insights now: '+results);
-            //     //sfutil.upsertInsights(insights);
-            // });
+            report.evalReport('00O61000003tGWS', access, conn, function (results) {
+                console.log('back in workder.js, and we have tons of insights now: '+results.length);
+                //sfutil.upsertInsights(insights);
+            });
 
-            report.evalReportFolder('Current Actions', access, conn, function (result) {
-                 console.log('in worker.js we evalled a folder');
-                 console.log('back in workder.js, and we have tons of insights now: '+result.length);
-
-             });
+            // report.evalReportFolder('Current Actions', access, conn, function (result) {
+            //      console.log('in worker.js we evalled a folder');
+            //      console.log('back in workder.js, and we have tons of insights now: '+result.length);
+            //
+            //  });
 
 
         });

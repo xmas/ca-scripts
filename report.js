@@ -223,18 +223,12 @@ function evalData (group, path, report, level, callback) {
     var keyT = group.key+'!T';
     var data = report.factMap[keyT];
     var count = data.rows.length;
-    if (count === 0) {
-        callback(null);
-    }
     var store = {};
 
     store.data = data;
     store.path = path;
     store.label = group.label;
     store.value = group.value;
-    if (data.rows.length <= 0) {
-        callback(null);
-    }
 
     var header_order = report.reportMetadata.detailColumns;
     var header_data = report.reportExtendedMetadata.detailColumnInfo;
@@ -252,19 +246,21 @@ function evalData (group, path, report, level, callback) {
 
     // diff.calculateDiff(access.orgid, arrayFromKey(path, "value").join("/"), store);
     // console.log('BACK IN REPORTS');
-    // //console.log(JSON.stringify(store, null, 4));
 
-    s3.getVersion(access.orgid.toString(), arrayFromKey(path, "value").join("/"), 2, function (data) {
+    if ((data.rows.length <= 0) || (count === 0)) {
+        // do nothing;
+    } else {
+        s3.getVersion(access.orgid.toString(), arrayFromKey(path, "value").join("/"), 2, function (data) {
 
-        var prev = JSON.parse(data.toString());
-        var delta = diff.evaldiff(store, prev);
+            var prev = JSON.parse(data.toString());
+            var delta = diff.evaldiff(store, prev);
 
-        console.log('diff: '+JSON.stringify(delta, null, 4));
+            console.log('diff: '+JSON.stringify(delta, null, 4));
 
-        //callback(null);
-        evalInsight(delta, group, path, report, level, count, delta.data, callback)
-    });
-
+            //callback(null);
+            evalInsight(delta, group, path, report, level, count, delta.data, callback)
+        });
+    }
 
 
     //saveOutput('store.json', JSON.stringify(store), path, saveToS3);

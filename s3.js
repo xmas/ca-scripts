@@ -22,7 +22,7 @@ function awsConfig() {
 }
 
 
-
+// TODO : sometimes there are new things with no dir yet and S3 just goes down the line and returns stuff we need to make sure the key returned is the key we asked for and if not then we need to return null.
 function getVersion (bucket, key, back, callback) {
     bucket = bucket.toLowerCase();
     var s3 = new AWS.S3();
@@ -32,8 +32,10 @@ function getVersion (bucket, key, back, callback) {
         MaxKeys: back
     };
     s3.listObjectVersions(version_params, function(err, data) {
-        if (err) console.log(err, err.stack); // an error occurred
-        else {
+        if (err) {
+            console.log(err, err.stack); // an error occurred
+            console.log('bucket: '+bucket+ 'key: '+key+' back: '+back+' lastVersion: '+lastVersion);
+        } else {
             //console.log(data);           // successful response
             if (data.Versions.length <  back-1) {
                 console.log('only one version');
@@ -42,6 +44,7 @@ function getVersion (bucket, key, back, callback) {
             //console.log(data);
             var lastVersion = data.Versions[back-1].VersionId;
             console.log('got last version for path: '+key+' id: '+lastVersion);
+            console.log(JSON.stringify(data, null, 4));
             var get_params = {
                 Bucket: bucket,
                 Key: key+'/store.json',
