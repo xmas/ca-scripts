@@ -9,7 +9,7 @@ var _ = require('underscore');
 
 function evaldiff(current, prev) {
 
-    console.log('DIFF');
+    //console.log('DIFF');
     var delta = _.clone(current);
 
     // aggregates
@@ -27,16 +27,16 @@ function evaldiff(current, prev) {
     var p_row_map = mappifyRows(prev.data.rows, prev.headers, objs);
     var c_row_map = mappifyRows(current.data.rows, current.headers, objs);
 
-    console.log('prev: '+JSON.stringify(p_row_map, null, 4));
-    console.log('current: '+JSON.stringify(c_row_map, null, 4));
+    // console.log('prev: '+JSON.stringify(p_row_map, null, 4));
+    // console.log('current: '+JSON.stringify(c_row_map, null, 4));
 
 
     var sobjs = _.union(_.keys(p_row_map), _.keys(c_row_map));
 
-    console.log(sobjs);
+    //console.log(sobjs);
     for (var i = 0; i < sobjs.length; i++ ) {
         var sobj = sobjs[i];
-        console.log('eval: '+sobj);
+        //console.log('eval: '+sobj);
         var p = p_row_map[sobj];
         var c = c_row_map[sobj];
 
@@ -76,8 +76,8 @@ function evaldiff(current, prev) {
 
     }
 
-    console.log('++++++++++++++++++++++++++');
-    console.log(JSON.stringify(delta, null, 4));
+    // console.log('++++++++++++++++++++++++++');
+    // console.log(JSON.stringify(delta, null, 4));
 
     return delta;
 
@@ -117,7 +117,11 @@ function mappifyRows(rows, headers) {
 
             // currency is stored w/ the currency type, we're ignoring that for now
             if (headers[h].dataType === 'currency') {
-                value = row[h].value.amount;
+
+                //console.log('header: '+h+' row: '+JSON.stringify(row, null, 4));
+                if (row[h].value) {
+                    value = row[h].value.amount;
+                }
             }
             rowmap[header] = value;
         }
