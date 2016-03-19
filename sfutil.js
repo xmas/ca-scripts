@@ -39,3 +39,20 @@ function getSFConnection (access) {
 
     return conn;
 }
+
+function upsertInsights (insights) {
+
+    conn.bulk.load("Insight__c", "upsert", {extIdField: "Path__c"}, insights, function(err, rets) {
+      if (err) { return console.error(err); }
+      for (var i=0; i < rets.length; i++) {
+        if (rets[i].success) {
+          console.log("#" + (i+1) + " loaded successfully, id = " + rets[i].id);
+        } else {
+          console.log("#" + (i+1) + " error occurred, message = " + rets[i].errors.join(', '));
+        }
+      }
+      // ...
+    });
+
+
+}
