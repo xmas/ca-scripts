@@ -12,6 +12,7 @@ var fs = require('fs');
 var _ = require('underscore');
 var s3 = require('./s3.js');
 var diff = require('./diff.js');
+var Promise = require("bluebird");
 
 var conn = {};
 var access = {};
@@ -20,6 +21,7 @@ function evalReportFolder (folderName, sfacess, sfconn, callback) {
     conn = sfconn;
     access = sfacess;
     folderName = _.isUndefined(folderName) ? 'Current Actions' : folderName;
+    var total_insights = [];
 
     conn.query("SELECT Id, Name FROM Folder WHERE Name = '"+folderName+"'",
     function(err, result) {
@@ -27,20 +29,32 @@ function evalReportFolder (folderName, sfacess, sfconn, callback) {
         var folderID = result.records[0].Id;
         conn.query("SELECT Id, Name, Description FROM Report WHERE Ownerid = '"+folderID+"' and Ownerid != null", function(err, result) {
             if (err) { return console.error(err); }
-            var records =[];
+
+            var report_promises = [];
             for (var i = 0; i < result.records.length; i++) {
-                //console.log('evalReport: '+result.records[i].Id);
-                evalReport(result.records[i].Id, access, conn, callback);
-                //records.push();
+                var eval_report_promise = new Promise( function(resolve) {
+                    evalReport(result.records[i].Id, access, conn, function (results) {
+                        //console.log('in eval report, calling back with some this many datas: '+results.length+' prior total: '+total_insights.length);
+                        total_insights = total_insights.concat(results);
+                        //console.log('and the new total is: '+total_insights.length);
+                        resolve();
+                    });
+                });
+                report_promises.push(eval_report_promise);
             }
-            //return records;
+
+            Promise.all(report_promises).then (function () {
+                //console.log('about to call back from eval folder with this many insights: '+total_insights.length);
+                callback(total_insights);
+            });
         });
     });
 }
 
-function evalReport (reportId, sfacesss, sfconn, insights, callback) {
+function evalReport (reportId, sfacesss, sfconn, callback) {
     conn = sfconn;
     access = sfacesss;
+    var insights = [];
 
     // execute report synchronously with details option,
     // to get detail rows in execution result.
@@ -62,8 +76,8 @@ function evalReport (reportId, sfacesss, sfconn, insights, callback) {
         };
         path.push(path_node);
 
-        evalGrouping(groupingsDown, path, report, 0, insights, function (data) {
-            console.log('in eval report, calling back with some this many datas: '+data.length);
+        promiseGrouping(groupingsDown, path, report, 0, insights, function (data) {
+            //console.log('in eval report, calling back with some this many datas: '+data.length);
             callback(data);
         });
         //console.log(insights);
@@ -129,31 +143,74 @@ function evalGrouping (parentGroup, path, report, level, insights, callback) {
                 console.log('callback from eval grouping from eval data');
                 callback(insights);
             }
-
-
         }
-        );
+    );
+
+    // eval child groupings
+    var childGroup = group.groupings;
+    evalGrouping(childGroup, clone_path, report, level+1, insights, function () {
+        completedAsyncCalls++;
+        console.log('called from inner eval grouping: '+arrayFromKey(clone_path, "value").join("."));
+        console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
+        console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
+
+        if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
+            console.log('MAYBE CALLBACK HERE callback from eval grouping from an inner eval grouping');
+            callback(insights);
+        }
+    }
+);
+}
+
+
+//return insights;
+}
+
+function promiseGrouping (parentGroup, path, report, level, insights, callback) {
+
+    if (parentGroup.length === 0) {
+        callback(insights);
+    }
+
+    var eval_promises = [];
+    for (var i = 0; i < parentGroup.length; i++) {
+
+        // eval this group
+        var group = parentGroup[i];
+        var clone_path = _.clone(path);
+        //console.log('going to nonNullValue: '+group.value );
+        var path_node = {
+            label : group.label,
+            value : nonNullValue(group.value).replace(" ", "")
+        };
+        clone_path.push(path_node);
+
+
+        var eval_data_promise = new Promise( function(resolve) {
+            evalData(group, clone_path, report, level, function(insight) {
+                if (insight != null) {
+                    //console.log('PUSH to insights: '+insight.Name);
+                    insights.push(insight);
+                }
+                resolve();
+            });
+        });
+        eval_promises.push(eval_data_promise);
+
 
         // eval child groupings
         var childGroup = group.groupings;
-        evalGrouping(childGroup, clone_path, report, level+1, insights, function () {
-            completedAsyncCalls++;
-            console.log('called from inner eval grouping: '+arrayFromKey(clone_path, "value").join("."));
-            console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
-            console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
-
-            if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
-                console.log('MAYBE CALLBACK HERE callback from eval grouping from an inner eval grouping');
-               callback(insights);
-            }
-
-
-        }
-);
+        var group_promises = new Promise(function(resolve) {
+            promiseGrouping(childGroup, clone_path, report, level+1, insights, function () {
+                resolve();
+            });
+        });
+        eval_promises.push(group_promises);
     }
 
-
-    //return insights;
+    Promise.all(eval_promises).then(function() {
+        callback(insights);
+    });
 }
 
 
@@ -292,8 +349,8 @@ function evalData (group, path, report, level, callback) {
     //console.log("Parents: "+insight.Parents__c);
 
     //return insight;
-    console.log('Insight created: '+insight.Name);
-    console.log('         EVAL DATA --- path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
+    //console.log('Insight created: '+insight.Name);
+    //console.log('         EVAL DATA --- path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
     callback(insight);
 }
 
@@ -386,7 +443,7 @@ function createColumnHeaders (report) {
 
 function nonNullValue (value) {
     if ( _.isNull(value)) {
-        console.log('need to repalce a null value of: '+value)
+        //console.log('need to replace a null value of: '+value)
         var thing = "Other";
         return thing;
     }
