@@ -36,9 +36,16 @@ function getVersion (bucket, key, back, callback) {
             console.log(err, err.stack); // an error occurred
             console.log('bucket: '+bucket+ 'key: '+key+' back: '+back+' lastVersion: '+lastVersion);
         } else {
-            //console.log(data);           // successful response
+
             if (data.Versions.length <  back-1) {
                 console.log('only one version');
+                callback(null);
+                return;
+            }
+
+            if (data.Versions[back-1].Key != key+'/store.json') {
+                console.log('only one version, key mismatch: '+key+ ' vs '+data.Versions[back-1].Key);
+                callback(null);
                 return;
             }
             //console.log(data);
