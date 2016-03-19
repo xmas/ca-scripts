@@ -50,8 +50,8 @@ function getVersion (bucket, key, back, callback) {
             }
             //console.log(data);
             var lastVersion = data.Versions[back-1].VersionId;
-            console.log('got last version for path: '+key+' id: '+lastVersion);
-            console.log(JSON.stringify(data, null, 4));
+            //console.log('got last version for path: '+key+' id: '+lastVersion);
+            //console.log(JSON.stringify(data, null, 4));
             var get_params = {
                 Bucket: bucket,
                 Key: key+'/store.json',
@@ -152,8 +152,8 @@ function uploadObject(bucket, key, object, callback) {
         if (err) {
             console.log("Error uploading data: ", err);
         } else {
-            console.log("Successfully uploaded data to: "+bucket+" // "+key);
-            console.log(data);
+            //console.log("Successfully uploaded data to: "+bucket+" // "+key);
+            //console.log(data);
         }
       });
     });
