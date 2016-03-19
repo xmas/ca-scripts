@@ -129,41 +129,39 @@ function evalGrouping (parentGroup, path, report, level, insights, callback) {
         };
         clone_path.push(path_node);
 
-        evalData(group, clone_path, report, level, function (insight) {
-            completedDataCalls++;
-            console.log('called from DATA eval: '+arrayFromKey(clone_path, "value").join("."));
-            console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
-            console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
-            if (insight != null) {
-                console.log('PUSH to insights: '+insight.Name);
-                insights.push(insight);
-            }
+        evalData(group, clone_path, report, level,
+            function (insight) {
+                completedDataCalls++;
+                console.log('called from DATA eval: '+arrayFromKey(clone_path, "value").join("."));
+                console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
+                console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
+                if (insight != null) {
+                    console.log('PUSH to insights: '+insight.Name);
+                    insights.push(insight);
+                }
 
-            if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
-                console.log('callback from eval grouping from eval data');
-                callback(insights);
-            }
-        }
-    );
+                if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
+                    console.log('callback from eval grouping from eval data');
+                    callback(insights);
+                }
+            });
 
     // eval child groupings
     var childGroup = group.groupings;
-    evalGrouping(childGroup, clone_path, report, level+1, insights, function () {
-        completedAsyncCalls++;
-        console.log('called from inner eval grouping: '+arrayFromKey(clone_path, "value").join("."));
-        console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
-        console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
+    evalGrouping(childGroup, clone_path, report, level+1, insights,
+        function () {
+            completedAsyncCalls++;
+            console.log('called from inner eval grouping: '+arrayFromKey(clone_path, "value").join("."));
+            console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
+            console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
 
-        if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
-            console.log('MAYBE CALLBACK HERE callback from eval grouping from an inner eval grouping');
-            callback(insights);
-        }
+            if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
+                console.log('MAYBE CALLBACK HERE callback from eval grouping from an inner eval grouping');
+                callback(insights);
+            }
+        });
     }
-);
-}
 
-
-//return insights;
 }
 
 function promiseGrouping (parentGroup, path, report, level, insights, callback) {
@@ -252,12 +250,16 @@ function evalData (group, path, report, level, callback) {
     } else {
         s3.getVersion(access.orgid.toString(), arrayFromKey(path, "value").join("/"), 2, function (data) {
 
-            var prev = JSON.parse(data.toString());
-            var delta = diff.evaldiff(store, prev);
+            var delta = {};
+            if (data) {
+                var prev = JSON.parse(data.toString());
+                delta = diff.evaldiff(store, prev);
 
-            console.log('diff: '+JSON.stringify(delta, null, 4));
+                console.log('diff: '+JSON.stringify(delta, null, 4));
+            } else {
+                delta = _.clone(store);
+            }
 
-            //callback(null);
             evalInsight(delta, group, path, report, level, count, delta.data, callback)
         });
     }
