@@ -37,6 +37,5 @@ function getSFConnection (access) {
         pgutil.upsertAccess(access);
     });
 
-
     return conn;
 }

@@ -11,6 +11,7 @@ var jsforce = require('jsforce');
 var fs = require('fs');
 var _ = require('underscore');
 var s3 = require('./s3.js');
+var diff = require('./diff.js');
 
 var conn = {};
 var access = {};
@@ -37,18 +38,20 @@ function evalReportFolder (folderName, sfacess, sfconn, callback) {
     });
 }
 
-function evalReport (reportId, sfacesss, sfconn, callback) {
+function evalReport (reportId, sfacesss, sfconn, insights, callback) {
     conn = sfconn;
     access = sfacesss;
 
     // execute report synchronously with details option,
     // to get detail rows in execution result.
+    console.log('reportId: '+reportId);
     var report = conn.analytics.report(reportId);
     report.execute({ details: true }, function(err, report) {
         if (err) {
+            console.error('report exection error');
             return console.error(err);
         }
-        saveOutput("full.json", JSON.stringify(report));
+        //saveOutput("full.json", JSON.stringify(report));
         var headers = createColumnHeaders(report);
         report.headers = headers;
         var groupingsDown = report.groupingsDown.groupings;
@@ -58,17 +61,21 @@ function evalReport (reportId, sfacesss, sfconn, callback) {
             value : report.attributes.reportId.replace(" ", "")
         };
         path.push(path_node);
-        var insights = evalGrouping(groupingsDown, path, report, 0, []);
+
+        evalGrouping(groupingsDown, path, report, 0, insights, function (data) {
+            console.log('in eval report, calling back with some this many datas: '+data.length);
+            callback(data);
+        });
         //console.log(insights);
         //saveOutput("insights.json", JSON.stringify(insights));
 
-        createInsights(insights);
+        //createInsights(insights);
     });
 }
 
 function createInsights (insights) {
 
-    conn.bulk.load("Insight__c", "insert", insights, function(err, rets) {
+    conn.bulk.load("Insight__c", "upsert", {extIdField: "Path__c"}, insights, function(err, rets) {
       if (err) { return console.error(err); }
       for (var i=0; i < rets.length; i++) {
         if (rets[i].success) {
@@ -84,43 +91,85 @@ function createInsights (insights) {
 }
 
 
-function evalGrouping (parentGroup, path, report, level, insights) {
+function evalGrouping (parentGroup, path, report, level, insights, callback) {
+
+    var completedAsyncCalls = 0;
+    var completedAsyncCallsTarget = parentGroup.length;
+
+    var completedDataCalls = 0;
+    var completedDataCallsTarget = parentGroup.length;
+
+    if (parentGroup.length === 0) {
+        callback(insights);
+    }
 
     for (var i = 0; i < parentGroup.length; i++) {
 
         // eval this group
         var group = parentGroup[i];
         var clone_path = _.clone(path);
-        console.log('going to nonNullValue: '+group.value );
+        //console.log('going to nonNullValue: '+group.value );
         var path_node = {
             label : group.label,
             value : nonNullValue(group.value).replace(" ", "")
         };
         clone_path.push(path_node);
 
-        var insight = evalData(group, clone_path, report, level);
-        if (insight != null) {
-            insights.push(insight);
+        evalData(group, clone_path, report, level, function (insight) {
+            completedDataCalls++;
+            console.log('called from DATA eval: '+arrayFromKey(clone_path, "value").join("."));
+            console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
+            console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
+            if (insight != null) {
+                console.log('PUSH to insights: '+insight.Name);
+                insights.push(insight);
+            }
+
+            if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
+                console.log('callback from eval grouping from eval data');
+                callback(insights);
+            }
+
+
         }
+        );
 
         // eval child groupings
         var childGroup = group.groupings;
-        evalGrouping(childGroup, clone_path, report, level+1, insights);
+        evalGrouping(childGroup, clone_path, report, level+1, insights, function () {
+            completedAsyncCalls++;
+            console.log('called from inner eval grouping: '+arrayFromKey(clone_path, "value").join("."));
+            console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
+            console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
+
+            if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
+                console.log('MAYBE CALLBACK HERE callback from eval grouping from an inner eval grouping');
+               callback(insights);
+            }
+
+
+        }
+);
     }
-    return insights;
+
+
+    //return insights;
 }
 
-function evalData (group, path, report, level) {
-    console.log('path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
+
+
+
+
+
+function evalData (group, path, report, level, callback) {
+    //console.log('EVAL DATA --- path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
 
     var keyT = group.key+'!T';
     var data = report.factMap[keyT];
     var count = data.rows.length;
     if (count === 0) {
-        return;
+        callback(null);
     }
-
-
     var store = {};
 
     store.data = data;
@@ -129,7 +178,7 @@ function evalData (group, path, report, level) {
     store.value = group.value;
     store.groupingColumnInfo = groupingColumnInfo;
     if (data.rows.length <= 0) {
-        return;
+        callback(null);
     }
 
     var header_order = report.reportMetadata.detailColumns;
@@ -137,22 +186,24 @@ function evalData (group, path, report, level) {
     var headers = [];
     for (var header_index = 0; header_index < header_order.length; header_index++) {
         var header_key = header_order[header_index];
-        console.log('header key: '+header_key);
+        //console.log('header key: '+header_key);
         headers.push(header_data[header_key]);
     }
     store.headers = headers;
 
     var saveToS3 = true;
+
+    // now that we have our store, we can compare the the previous values
+
+    // diff.calculateDiff(access.orgid, arrayFromKey(path, "value").join("/"), store);
+    // console.log('BACK IN REPORTS');
+    // //console.log(JSON.stringify(store, null, 4));
+
+
     saveOutput('store.json', JSON.stringify(store), path, saveToS3);
 
 
-    // var answer = {};
-    // answer['title'] = path.join(".");
-    // answer['details'] = 'Found '+data.rows.length + ' objects.';
-    // answer['path'] = path.join(".");
-    // answer['guid'] = '0';
-    //
-    // return answer;
+
     var insight = {};
 
     insight.Data_Source__c = report.attributes.reportName;
@@ -196,7 +247,7 @@ function evalData (group, path, report, level) {
 
         for (var i = 1; i < path.length; i++) {
             var groupingColumnInfo =  groupingColumnInfoForLevel(i -1, report);
-            console.log(JSON.stringify(groupingColumnInfo));
+            //console.log(JSON.stringify(groupingColumnInfo));
             var node = path[i];
             var dataType = groupingColumnInfo.dataType;
             var node_li = '<span class="sobject-link">'+groupingColumnInfo.label+': </span>';
@@ -209,7 +260,7 @@ function evalData (group, path, report, level) {
             if (node.value != null && dataType === "string") {
                 var myRe = /(\d\d\d\d\d)/;
                 var myArray = myRe.exec(node.value);
-                console.log(node.value);
+                //console.log(node.value);
 
                 if (myArray!= null && myArray.length > 0) {
                     node_li = node_li + '<a href="https://rowan-dev-ed.my.salesforce.com/'+node.value+'" class="sobject-link">'+node.label+'</a>';
@@ -238,9 +289,12 @@ function evalData (group, path, report, level) {
     long_title = long_title +'.';
 
     insight.Long_Name__c = long_title;
-    console.log("Parents: "+insight.Parents__c);
+    //console.log("Parents: "+insight.Parents__c);
 
-    return insight;
+    //return insight;
+    console.log('Insight created: '+insight.Name);
+    console.log('         EVAL DATA --- path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
+    callback(insight);
 }
 
 function getRandomInt(min, max) {

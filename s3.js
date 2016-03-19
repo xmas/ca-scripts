@@ -4,7 +4,8 @@ module.exports = {
     listBuckets : listBuckets,
     ensureBucket : ensureBucket,
     getSignedUrlForBucketAndKey : getSignedUrlForBucketAndKey,
-    uploadObject : uploadObject
+    uploadObject : uploadObject,
+    getVersion : getVersion
 }
 
 // Load the AWS SDK for Node.js
@@ -20,6 +21,42 @@ function awsConfig() {
     AWS.config.update({accessKeyId: process.env.AWS_ACCESS_KEY_ID, secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY, region: 'us-west-2'});
 }
 
+
+
+function getVersion (bucket, key, back, callback) {
+    var s3 = new AWS.S3();
+    var version_params = {
+        Bucket: bucket.toLowerCase(), /* required */
+        KeyMarker: key,
+        MaxKeys: back
+    };
+    s3.listObjectVersions(version_params, function(err, data) {
+        if (err) console.log(err, err.stack); // an error occurred
+        else {
+            //console.log(data);           // successful response
+            if (data.Versions.length <  back-1) {
+                console.log('only one version');
+                return;
+            }
+            //console.log(data);
+            var lastVersion = data.Versions[back-1].VersionId;
+            console.log('got last version for path: '+key+' id: '+lastVersion);
+            var get_params = {
+                Bucket: bucket,
+                Key: key+'/store.json',
+                VersionId: lastVersion
+            }
+
+            s3.getObject(get_params, function(err, data) {
+                if (err) console.log(err, err.stack); // an error occurred
+                else {
+                    //console.log(data);
+                    callback(data.Body);
+                }
+            });
+        }
+    });
+}
 
 // Create a bucket using bound parameters and put something in it.
 // Make sure to change the bucket name from "myBucket" to something unique.
@@ -51,7 +88,6 @@ function uploadObject(bucket, key, object, callback) {
     //     }
     // });
     //
-    // console.log('-----------------------');
     //
     // console.log(request);
     // console.log('-----------------------');
@@ -82,6 +118,19 @@ function uploadObject(bucket, key, object, callback) {
     //     }
     //     callback(data);
     // });
+    // var s3 = new AWS.S3();
+    // var params = {
+    //     Bucket: bucket, /* required */
+    //     KeyMarker: key,
+    // };
+    // s3.listObjectVersions(params, function(err, data) {
+    //     if (err) console.log(err, err.stack); // an error occurred
+    //     else {
+    //         console.log('----------------------- '+key+' ------------------------');
+    //         console.log(data);           // successful response
+    //     }
+    // });
+
 
     var s3bucket = new AWS.S3({params: {Bucket: bucket}});
     s3bucket.createBucket(function() {

@@ -16,22 +16,19 @@ pgutil.orgAccessList(function(results) {
         var access = orgs[i];
         console.log('get connection to org: '+access.orgid);
         var conn = sfutil.getSFConnection(access);
-        //report.evalReport('00O61000003tJVN', conn);
-        //report.evalReportFolder(conn);
+
         s3.ensureBucket(access.orgid, function() {
 
-            report.evalReportFolder('Current Actions', null, conn, function (result) {
-                 console.log('in worker.js we evalled a folder');
-                 console.log(result);
-             });
+            // report.evalReportFolder('Current Actions', access, conn, function (result) {
+            //      console.log('in worker.js we evalled a folder');
+            //      console.log(result);
+            //  });
 
-
-
-            // console.log('eval report 00O61000003tJVN');
-            // report.evalReport('00O61000003tJVN', null, conn, function (result) {
-            //     console.log('in worker.js we evalled a report');
-            //     console.log(result);
-            // });
+            var insights = [];
+            report.evalReport('00O61000003tGWS', access, conn, insights, function (results) {
+                console.log('back in workder.js, and we have tons of insights now: '+results);
+                //sfutil.upsertInsights(insights);
+            });
 
         });
     }
