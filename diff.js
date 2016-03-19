@@ -1,35 +1,23 @@
 "use strict";
 
 module.exports = {
-    calculateDiff : calculateDiff
+    evaldiff : evaldiff
 }
 
 var s3 = require('./s3.js');
+var _ = require('underscore');
 
-function calculateDiff (orgid, path, current, callback) {
-    console.log('CALC DIFF');
-
-    s3.getVersion(orgid, path, 6, function (data) {
-
-        console.log('got version');
-
-        var prev = JSON.parse(data.toString());
-        getdiff(current, prev),
-        callback(current);
-    });
-
-}
-
-function getdiff(current, prev) {
+function evaldiff(current, prev) {
 
     console.log('DIFF');
+    var delta = _.clone(current);
 
     // aggregates
     var p_agg = prev.data.aggregates[0];
     var c_agg = current.data.aggregates[0];
     var delta_agg = c_agg.value - p_agg.value;
     if (delta_agg != 0) {
-            current.data.aggregates[0].delta = delta_agg;
+            delta.data.aggregates[0].delta = delta_agg;
             console.log('Aggegate diff found: '+delta_agg);
     }
     // map each row to the first data cell value
@@ -75,11 +63,11 @@ function getdiff(current, prev) {
                         var delta_val = cval - pval;
                         if (delta_val != 0) {
                             console.log('obj: '+sobj+' header: '+header+ ' delta: '+delta_val);
-                            addDelta(current, sobj, header, delta_val);
+                            addDelta(delta, sobj, header, delta_val);
                         }
                     } else if (cval != pval) {
                         console.log('obj: '+sobj+' header: '+header+ ' new: '+cval+ ' old: '+pval);
-                        addDelta(current, sobj, header, {"old":pval});
+                        addDelta(delta, sobj, header, {"old":pval});
                     }
                 }
 
@@ -89,17 +77,19 @@ function getdiff(current, prev) {
     }
 
     console.log('++++++++++++++++++++++++++');
-    console.log(JSON.stringify(current, null, 4));
+    console.log(JSON.stringify(delta, null, 4));
+
+    return delta;
 
 }
 
 // known to be super slow
-function addDelta (current, sobj, header, delta) {
-    var header_index = indexOfHeader(current.headers, header);
-    for (var row_i = 0; row_i < current.data.rows.length; row_i++ ) {
-        var value = current.data.rows[row_i].dataCells[0].value;
+function addDelta (delta, sobj, header, change) {
+    var header_index = indexOfHeader(delta.headers, header);
+    for (var row_i = 0; row_i < delta.data.rows.length; row_i++ ) {
+        var value = delta.data.rows[row_i].dataCells[0].value;
         if (value === sobj) {
-            current.data.rows[row_i].dataCells[header_index].delta = delta;
+            delta.data.rows[row_i].dataCells[header_index].delta = change;
             return;
         }
     }

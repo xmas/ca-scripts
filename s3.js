@@ -24,9 +24,10 @@ function awsConfig() {
 
 
 function getVersion (bucket, key, back, callback) {
+    bucket = bucket.toLowerCase();
     var s3 = new AWS.S3();
     var version_params = {
-        Bucket: bucket.toLowerCase(), /* required */
+        Bucket: bucket, /* required */
         KeyMarker: key,
         MaxKeys: back
     };
@@ -48,8 +49,10 @@ function getVersion (bucket, key, back, callback) {
             }
 
             s3.getObject(get_params, function(err, data) {
-                if (err) console.log(err, err.stack); // an error occurred
-                else {
+                if (err) {
+                    console.log(err, err.stack); // an error occurred
+                    console.log('bucket: '+bucket+ 'key: '+key+' back: '+back+' lastVersion: '+lastVersion);
+                } else {
                     //console.log(data);
                     callback(data.Body);
                 }

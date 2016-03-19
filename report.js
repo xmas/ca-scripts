@@ -185,7 +185,6 @@ function promiseGrouping (parentGroup, path, report, level, insights, callback) 
         };
         clone_path.push(path_node);
 
-
         var eval_data_promise = new Promise( function(resolve) {
             evalData(group, clone_path, report, level, function(insight) {
                 if (insight != null) {
@@ -233,7 +232,6 @@ function evalData (group, path, report, level, callback) {
     store.path = path;
     store.label = group.label;
     store.value = group.value;
-    store.groupingColumnInfo = groupingColumnInfo;
     if (data.rows.length <= 0) {
         callback(null);
     }
@@ -256,11 +254,23 @@ function evalData (group, path, report, level, callback) {
     // console.log('BACK IN REPORTS');
     // //console.log(JSON.stringify(store, null, 4));
 
+    s3.getVersion(access.orgid.toString(), arrayFromKey(path, "value").join("/"), 2, function (data) {
 
-    saveOutput('store.json', JSON.stringify(store), path, saveToS3);
+        var prev = JSON.parse(data.toString());
+        var delta = diff.evaldiff(store, prev);
+
+        console.log('diff: '+JSON.stringify(delta, null, 4));
+
+        //callback(null);
+        evalInsight(delta, group, path, report, level, count, delta.data, callback)
+    });
 
 
 
+    //saveOutput('store.json', JSON.stringify(store), path, saveToS3);
+}
+
+function evalInsight(store, group, path, report, level, count, data, callback) {
     var insight = {};
 
     insight.Data_Source__c = report.attributes.reportName;

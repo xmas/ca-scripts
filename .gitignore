@@ -35,3 +35,9 @@ node_modules
 tmp/
 
 .env
+
+text.png
+
+full.json
+
+pie.png
