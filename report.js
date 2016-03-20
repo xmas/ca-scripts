@@ -238,7 +238,6 @@ function evalData (group, path, report, level, callback) {
     }
     store.headers = headers;
 
-    var saveToS3 = true;
 
     // now that we have our store, we can compare the the previous values
 
@@ -255,7 +254,7 @@ function evalData (group, path, report, level, callback) {
                 var prev = JSON.parse(data.toString());
                 delta = diff.evaldiff(store, prev);
 
-                console.log('diff: '+JSON.stringify(delta, null, 4));
+                //console.log('diff: '+JSON.stringify(delta, null, 4));
             } else {
                 delta = _.clone(store);
             }
@@ -265,7 +264,7 @@ function evalData (group, path, report, level, callback) {
     }
 
 
-    //saveOutput('store.json', JSON.stringify(store), path, saveToS3);
+
 }
 
 function evalInsight(store, group, path, report, level, count, data, callback) {
@@ -289,6 +288,7 @@ function evalInsight(store, group, path, report, level, count, data, callback) {
 
     // create the parents list
     insight.Parents__c = '';
+    insight.Is_Read__c = false;
 
     var count_history = [];
     for (var hi = 0; hi < getRandomInt(1000,10000); hi++) {
@@ -359,6 +359,9 @@ function evalInsight(store, group, path, report, level, count, data, callback) {
     //return insight;
     //console.log('Insight created: '+insight.Name);
     //console.log('         EVAL DATA --- path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
+    
+    var saveToS3 = true;
+    saveOutput('store.json', JSON.stringify(store), path, saveToS3);
     callback(insight);
 }
 
