@@ -2,7 +2,8 @@
 
 // declare public exports
 module.exports = {
-  getSFConnection: getSFConnection
+  getSFConnection : getSFConnection,
+  upsertInsights : upsertInsights
 }
 
 var jsforce = require('jsforce');
@@ -40,7 +41,7 @@ function getSFConnection (access) {
     return conn;
 }
 
-function upsertInsights (insights) {
+function upsertInsights (conn, insights, callback) {
 
     conn.bulk.load("Insight__c", "upsert", {extIdField: "Path__c"}, insights, function(err, rets) {
       if (err) { return console.error(err); }
@@ -51,7 +52,7 @@ function upsertInsights (insights) {
           console.log("#" + (i+1) + " error occurred, message = " + rets[i].errors.join(', '));
         }
       }
-      // ...
+      callback('finished loading insights');
     });
 
 
