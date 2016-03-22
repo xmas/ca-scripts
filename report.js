@@ -104,66 +104,6 @@ function createInsights (insights) {
 
 }
 
-
-// function evalGrouping (parentGroup, path, report, level, insights, callback) {
-//
-//     var completedAsyncCalls = 0;
-//     var completedAsyncCallsTarget = parentGroup.length;
-//
-//     var completedDataCalls = 0;
-//     var completedDataCallsTarget = parentGroup.length;
-//
-//     if (parentGroup.length === 0) {
-//         callback(insights);
-//     }
-//
-//     for (var i = 0; i < parentGroup.length; i++) {
-//
-//         // eval this group
-//         var group = parentGroup[i];
-//         var clone_path = _.clone(path);
-//         //console.log('going to nonNullValue: '+group.value );
-//         var path_node = {
-//             label : group.label,
-//             value : nonNullValue(group.value).replace(" ", "")
-//         };
-//         clone_path.push(path_node);
-//
-//         evalData(group, clone_path, report, level,
-//             function (insight) {
-//                 completedDataCalls++;
-//                 console.log('called from DATA eval: '+arrayFromKey(clone_path, "value").join("."));
-//                 console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
-//                 console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
-//                 if (insight != null) {
-//                     console.log('PUSH to insights: '+insight.Name);
-//                     insights.push(insight);
-//                 }
-//
-//                 if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
-//                     console.log('callback from eval grouping from eval data');
-//                     callback(insights);
-//                 }
-//             });
-//
-//     // eval child groupings
-//     var childGroup = group.groupings;
-//     evalGrouping(childGroup, clone_path, report, level+1, insights,
-//         function () {
-//             completedAsyncCalls++;
-//             console.log('called from inner eval grouping: '+arrayFromKey(clone_path, "value").join("."));
-//             console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
-//             console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
-//
-//             if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
-//                 console.log('MAYBE CALLBACK HERE callback from eval grouping from an inner eval grouping');
-//                 callback(insights);
-//             }
-//         });
-//     }
-//
-// }
-
 function promiseGrouping (parentGroup, path, report, level, insights, callback) {
 
     if (parentGroup.length === 0) {
