@@ -7,7 +7,11 @@ module.exports = {
 var s3 = require('./s3.js');
 var _ = require('underscore');
 
-function evaldiff(current, prev) {
+function evaldiff(current, prev, callback) {
+
+    var new_count = 0;
+    var changed_count = 0;
+    var deleted_count = 0;
 
     //console.log('DIFF');
     var delta = _.clone(current);
@@ -40,12 +44,7 @@ function evaldiff(current, prev) {
         var p = p_row_map[sobj];
         var c = c_row_map[sobj];
 
-        if (p && !c) {
-            console.log('p has value, not c: '+p);
-        }
-        if (c && !p) {
-            console.log('c has value, not p: '+c);
-        }
+        var delta_found = false;
 
         if (c && p) {
             for (var h = 0; h < current.headers.length; h++) {
@@ -64,23 +63,37 @@ function evaldiff(current, prev) {
                         if (delta_val != 0) {
                             console.log('obj: '+sobj+' header: '+header+ ' delta: '+delta_val);
                             addDelta(delta, sobj, header, delta_val);
+                            delta_found = true;
                         }
                     } else if (cval != pval) {
                         console.log('obj: '+sobj+' header: '+header+ ' new: '+cval+ ' old: '+pval);
                         addDelta(delta, sobj, header, {"old":pval});
+                        delta_found = true;
                     }
                 }
 
             }
         }
 
+        if (delta_found) {
+            changed_count++
+        }
+        if (p && !c) {
+            //console.log('p has value, not c: '+p);
+            deleted_count++;
+        }
+        if (c && !p) {
+            //console.log('c has value, not p: '+c);
+            new_count++;
+        }
+
+
     }
 
     // console.log('++++++++++++++++++++++++++');
     // console.log(JSON.stringify(delta, null, 4));
 
-    return delta;
-
+    callback(delta, new_count, deleted_count, changed_count);
 }
 
 // known to be super slow

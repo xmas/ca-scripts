@@ -105,64 +105,64 @@ function createInsights (insights) {
 }
 
 
-function evalGrouping (parentGroup, path, report, level, insights, callback) {
-
-    var completedAsyncCalls = 0;
-    var completedAsyncCallsTarget = parentGroup.length;
-
-    var completedDataCalls = 0;
-    var completedDataCallsTarget = parentGroup.length;
-
-    if (parentGroup.length === 0) {
-        callback(insights);
-    }
-
-    for (var i = 0; i < parentGroup.length; i++) {
-
-        // eval this group
-        var group = parentGroup[i];
-        var clone_path = _.clone(path);
-        //console.log('going to nonNullValue: '+group.value );
-        var path_node = {
-            label : group.label,
-            value : nonNullValue(group.value).replace(" ", "")
-        };
-        clone_path.push(path_node);
-
-        evalData(group, clone_path, report, level,
-            function (insight) {
-                completedDataCalls++;
-                console.log('called from DATA eval: '+arrayFromKey(clone_path, "value").join("."));
-                console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
-                console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
-                if (insight != null) {
-                    console.log('PUSH to insights: '+insight.Name);
-                    insights.push(insight);
-                }
-
-                if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
-                    console.log('callback from eval grouping from eval data');
-                    callback(insights);
-                }
-            });
-
-    // eval child groupings
-    var childGroup = group.groupings;
-    evalGrouping(childGroup, clone_path, report, level+1, insights,
-        function () {
-            completedAsyncCalls++;
-            console.log('called from inner eval grouping: '+arrayFromKey(clone_path, "value").join("."));
-            console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
-            console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
-
-            if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
-                console.log('MAYBE CALLBACK HERE callback from eval grouping from an inner eval grouping');
-                callback(insights);
-            }
-        });
-    }
-
-}
+// function evalGrouping (parentGroup, path, report, level, insights, callback) {
+//
+//     var completedAsyncCalls = 0;
+//     var completedAsyncCallsTarget = parentGroup.length;
+//
+//     var completedDataCalls = 0;
+//     var completedDataCallsTarget = parentGroup.length;
+//
+//     if (parentGroup.length === 0) {
+//         callback(insights);
+//     }
+//
+//     for (var i = 0; i < parentGroup.length; i++) {
+//
+//         // eval this group
+//         var group = parentGroup[i];
+//         var clone_path = _.clone(path);
+//         //console.log('going to nonNullValue: '+group.value );
+//         var path_node = {
+//             label : group.label,
+//             value : nonNullValue(group.value).replace(" ", "")
+//         };
+//         clone_path.push(path_node);
+//
+//         evalData(group, clone_path, report, level,
+//             function (insight) {
+//                 completedDataCalls++;
+//                 console.log('called from DATA eval: '+arrayFromKey(clone_path, "value").join("."));
+//                 console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
+//                 console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
+//                 if (insight != null) {
+//                     console.log('PUSH to insights: '+insight.Name);
+//                     insights.push(insight);
+//                 }
+//
+//                 if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
+//                     console.log('callback from eval grouping from eval data');
+//                     callback(insights);
+//                 }
+//             });
+//
+//     // eval child groupings
+//     var childGroup = group.groupings;
+//     evalGrouping(childGroup, clone_path, report, level+1, insights,
+//         function () {
+//             completedAsyncCalls++;
+//             console.log('called from inner eval grouping: '+arrayFromKey(clone_path, "value").join("."));
+//             console.log('inner eval grouping at: '+completedAsyncCalls+'/'+completedAsyncCallsTarget);
+//             console.log('data eval at: '+completedDataCalls+'/'+completedDataCallsTarget);
+//
+//             if ((completedAsyncCalls >= completedAsyncCallsTarget) && (completedDataCalls >= completedDataCallsTarget)) {
+//                 console.log('MAYBE CALLBACK HERE callback from eval grouping from an inner eval grouping');
+//                 callback(insights);
+//             }
+//         });
+//     }
+//
+// }
 
 function promiseGrouping (parentGroup, path, report, level, insights, callback) {
 
@@ -245,21 +245,31 @@ function evalData (group, path, report, level, callback) {
     // console.log('BACK IN REPORTS');
 
     if ((data.rows.length <= 0) || (count === 0)) {
+        // TODO: always return... use old data if we don't have new data? There is value in knowing that things have been removed.
         callback(); // If we miss a callback then bad things happen since the entire callback chain gets fudged
     } else {
         s3.getVersion(access.orgid.toString(), arrayFromKey(path, "value").join("/"), 2, function (data) {
 
             var delta = {};
+            var counts = {};
+            counts.new_count = 0;
+            counts.deleted_count = 0;
+            counts.changed_count = 0;
             if (data) {
                 var prev = JSON.parse(data.toString());
-                delta = diff.evaldiff(store, prev);
+                diff.evaldiff(store, prev, function (returned_delta, new_count, deleted_count, changed_count){
+                    delta = returned_delta;
+                    counts.new_count = new_count;
+                    counts.deleted_count = deleted_count;
+                    counts.changed_count = changed_count;
+                });
 
                 //console.log('diff: '+JSON.stringify(delta, null, 4));
             } else {
                 delta = _.clone(store);
             }
 
-            evalInsight(delta, group, path, report, level, count, delta.data, callback)
+            evalInsight(delta, group, path, report, level, count, counts, callback)
         });
     }
 
@@ -267,8 +277,10 @@ function evalData (group, path, report, level, callback) {
 
 }
 
-function evalInsight(store, group, path, report, level, count, data, callback) {
+function evalInsight(store, group, path, report, level, count, counts, callback) {
     var insight = {};
+
+    var data = store.data;
 
     insight.Data_Source__c = report.attributes.reportName;
     insight.ReportID__c = report.attributes.reportId;
@@ -290,23 +302,23 @@ function evalInsight(store, group, path, report, level, count, data, callback) {
     insight.Parents__c = '';
     insight.Is_Read__c = false;
 
-    var count_history = [];
-    for (var hi = 0; hi < getRandomInt(1000,10000); hi++) {
-        count_history.push(getRandomInt(5,100));
-    }
-    count_history.push(count);
-    insight.Chart__c = JSON.stringify(count_history);
+    insight.Today_Total__c = count;
+    insight.Today_Changed__c = counts.changed_count;
+    insight.Today_New__c = counts.new_count;
+    insight.Today_Deleted__c = counts.deleted_count;
 
     // new or changed Leads where product interest is SLA: Gold and industry is Agriculture.
 
     // new or changed [Report_Type_Label__c] where [PATH Label [2]] is [Path Value [2]] and [PATH Label [3]] is [Path Value [3]].
 
-    var long_title = 'Found ('+count+') new or changed <span class="sobject-link">'+report.reportMetadata.reportType.label+'</span>';
+    var new_or_changed = insight.Today_New__c + insight.Today_Changed__c;
 
+    var long_title = 'Found '+stringForNumber(new_or_changed)+' new or changed <span class="sobject-link">'+report.reportMetadata.reportType.label+'</span>';
+    var where_string = "";
 
     if (path.length > 1) {
 
-        long_title = long_title+' where '
+        where_string = ' where '
         var parents = "";
         //'<ul class="slds-list--horizontal slds-has-dividers--right slds-has-inline-block-links">';
 
@@ -318,9 +330,9 @@ function evalInsight(store, group, path, report, level, count, data, callback) {
             var node_li = '<span class="sobject-link">'+groupingColumnInfo.label+': </span>';
             if (i > 1) {
                 if ( i > 2) {
-                    long_title = long_title + ' and ';
+                    where_string = where_string + ' and ';
                 }
-                long_title = long_title + groupingColumnInfo.label.toLowerCase()+' is <span class="sobject-link"> ';
+                where_string = where_string + groupingColumnInfo.label.toLowerCase()+' is <span class="sobject-link"> ';
             }
             if (node.value != null && dataType === "string") {
                 var myRe = /(\d\d\d\d\d)/;
@@ -330,19 +342,20 @@ function evalInsight(store, group, path, report, level, count, data, callback) {
                 if (myArray!= null && myArray.length > 0) {
                     node_li = node_li + '<a href="https://rowan-dev-ed.my.salesforce.com/'+node.value+'" class="sobject-link">'+node.label+'</a>';
                     if (i > 1) {
-                        long_title = long_title +  '<a href="https://rowan-dev-ed.my.salesforce.com/'+node.value+'">'+node.label+'</a></span>'
+                        where_string = where_string +  '<a href="https://rowan-dev-ed.my.salesforce.com/'+node.value+'">'+node.label+'</a></span>'
                     }
                     setAssocForLevel(node.value, node.label, i, insight);
                 } else {
                     node_li = node_li +node.label +'</span>';
                     if (i > 1) {
-                        long_title = long_title +node.label +'</span>';
+                        where_string = where_string +node.label +'</span>';
                     }
                 }
             } else {
-                node_li = node_li +node.label + +'</span>';
+                node_li = node_li +node.label +'</span>';
+
                 if (i > 1) {
-                    long_title = long_title +node.label +'</span>';
+                    where_string = where_string +node.label +'</span>';
                 }
             }
         parents = parents + '<li class="slds-list__item" >'+node_li+'</li>';
@@ -351,18 +364,30 @@ function evalInsight(store, group, path, report, level, count, data, callback) {
         insight.Parents__c = parents;
     }
 
-    long_title = long_title +'.';
+    long_title = long_title+where_string +'.';
 
     insight.Long_Name__c = long_title;
-    //console.log("Parents: "+insight.Parents__c);
+    var desc = 'There are '+stringForNumber(insight.Today_New__c)+' new and '+stringForNumber(insight.Today_Changed__c)+' changed <span class="sobject-link">'+report.reportMetadata.reportType.label+'</span>. There are '+stringForNumber(insight.Today_Total__c)+' '+report.reportMetadata.reportType.label.toLowerCase()+' matching this filter.';
 
-    //return insight;
+
+
+    insight.Details__c = desc;
+
     //console.log('Insight created: '+insight.Name);
     //console.log('         EVAL DATA --- path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
-    
+
+    //console.log(insight);
     var saveToS3 = true;
     saveOutput('store.json', JSON.stringify(store), path, saveToS3);
     callback(insight);
+}
+
+function stringForNumber (number) {
+    if (number < 0) {
+        var string = '(-'+number+')';
+        return string;
+    }
+    return number;
 }
 
 function getRandomInt(min, max) {
