@@ -82,8 +82,8 @@ function simulate_opportunities (conn, callback) {
                 stages_by_order[result.records[stage_i].SortOrder] = result.records[stage_i].ApiName;
                 stages_by_name[result.records[stage_i].ApiName] = result.records[stage_i].SortOrder;
             }
-            console.log(stages_by_name);
-            console.log(stages_by_order);
+            //console.log(stages_by_name);
+            //console.log(stages_by_order);
             resolve();
         });
     });
@@ -130,12 +130,12 @@ function simulate_opportunities (conn, callback) {
             if (current_stage < stage_max) {
                 // if the stage is "Closed Won" or "Closed Lost", do nothing
 
-                if (Math.random() < 0.3) {
+                if (Math.random() < 0.9) {
                     // advance the stage
                     if (current_stage === stage_max) {
                         // close the opp
                     } else {
-                        console.log('  ADVANCE STAGE++++++++');
+                        //console.log('  ADVANCE STAGE++++++++');
                         current_stage++;
                         new_opp.StageName = stages_by_order[current_stage];
                     }
@@ -145,32 +145,33 @@ function simulate_opportunities (conn, callback) {
                     if (current_stage <= 1) {
                         // do notihng
                     } else {
-                        console.log('  REGRESS STAGE--------------');
+                        //console.log('  REGRESS STAGE--------------');
                         current_stage--;
                         new_opp.StageName = stages_by_order[current_stage];
                     }
                 }
-                if (new_opp.StageName) {
-                    console.log('  old stage: '+opp.StageName+' new stage: '+new_opp.StageName);
-                }
+                // if (new_opp.StageName) {
+                //     console.log('  old stage: '+opp.StageName+' new stage: '+new_opp.StageName);
+                // }
 
 
-                // close date
-                if (Math.random() < 0.1) {
-                    var current_close_date = moment(opp.CloseDate);
-                    current_close_date.add(1, 'months');
-                    new_opp.CloseDate = current_close_date.format('YYYY-MM-DD');
-
-                }
+                // // close date
+                // if (Math.random() < 0.1) {
+                //     var current_close_date = moment(opp.CloseDate);
+                //     current_close_date.add(1, 'months');
+                //     new_opp.CloseDate = current_close_date.format('YYYY-MM-DD');
+                //
+                // }
+                new_opp.CloseDate = '2016-05-23';
 
                 // Opp Amount
                 var change_amount = (Math.random() < 0.1) ? randomIntInc(1,5)*(-1000) : randomIntInc(1,5)*(1500);
-                console.log('  change: '+change_amount);
+                //console.log('  change: '+change_amount);
                 if (opp.Amount < 0) {
                     opp.Amount = randomIntInc(6,15)*(1000);
                 }
                 new_opp.Amount = opp.Amount + change_amount;
-                console.log('  old amount: '+opp.Amount+' new ammount: '+new_opp.Amount);
+                //console.log('  old amount: '+opp.Amount+' new ammount: '+new_opp.Amount);
 
                 opportunities.push(new_opp);
 
@@ -181,17 +182,21 @@ function simulate_opportunities (conn, callback) {
 
 
         var new_opportunities = [];
-        if (Math.random() < 0.8) {
-            //80% chance for a new Opportunity
-            var new_opp ={};
-            new_opp.Name = moniker.choose();
-            new_opp.AccountId = accounts[randomIntInc(0,accounts.length-1)];
-            new_opp.Amount = randomIntInc(6,15)*(1000);
-            new_opp.CloseDate = today.add(1, 'months').format('YYYY-MM-DD');
-            new_opp.StageName = stages_by_order[randomIntInc(0,3)];
-            new_opportunities.push(new_opp);
+        for (var a_i = 0; a_i < accounts.length; a_i++) {
+            var new_opps = randomIntInc(0,3);
+            while (new_opps--) {
+                //80% chance for a new Opportunity
+                var new_opp ={};
+                new_opp.Name = moniker.choose();
+                new_opp.AccountId = accounts[a_i];
+                new_opp.Amount = randomIntInc(6,15)*(1000);
+                new_opp.CloseDate = '2016-05-23';
+                new_opp.StageName = 'Qualification';
+                //new_opp.StageName = stages_by_order[randomIntInc(0,3)];
+                new_opportunities.push(new_opp);
+            }
         }
-
+        console.log(JSON.stringify(new_opportunities, null, 4));
 
         callback(null, opportunities, new_opportunities);
     });
