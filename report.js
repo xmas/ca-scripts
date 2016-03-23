@@ -76,6 +76,8 @@ function evalReport (reportId, sfacesss, sfconn, callback) {
         };
         path.push(path_node);
 
+        //console.log(JSON.stringify(report, null, 4));
+
         promiseGrouping(groupingsDown, path, report, 0, insights, function (data) {
             //console.log('in eval report, calling back with some this many datas: '+data.length);
             callback(data);

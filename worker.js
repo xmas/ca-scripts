@@ -20,8 +20,8 @@ pgutil.orgAccessList(function(results) {
         s3.ensureBucket(access.orgid, function() {
 
 
-            report.evalReport('00O61000003tO9r', access, conn, function (results) {
-            //report.evalReportFolder('Current Actions', access, conn, function (results) {
+            //report.evalReport('00O61000003tO9r', access, conn, function (results) {
+            report.evalReportFolder('Current Actions', access, conn, function (results) {
                 console.log('back in workder.js, and we have tons of insights now: '+results.length);
                 for (var r = 0; r < results.length; r++) {
                     console.log('result: '+results[r].Long_Name__c);

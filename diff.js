@@ -22,7 +22,7 @@ function evaldiff(current, prev, callback) {
     var delta_agg = c_agg.value - p_agg.value;
     if (delta_agg != 0) {
             delta.data.aggregates[0].delta = delta_agg;
-            console.log('Aggegate diff found: '+delta_agg);
+            //console.log('Aggegate diff found: '+delta_agg);
     }
     // map each row to the first data cell value
 
@@ -53,20 +53,20 @@ function evaldiff(current, prev, callback) {
                 var cval = c[header];
 
                 if (pval && !cval) {
-                    console.log(header+' previous entry was deleted: '+pval);
+                    //console.log(header+' previous entry was deleted: '+pval);
                 } else if (cval && !pval) {
-                    console.log(header+' previous entry not present '+cval);
+                    //console.log(header+' previous entry not present '+cval);
                 } else {
 
                     if (_.isNumber(cval) && _.isNumber(pval)) {
                         var delta_val = cval - pval;
                         if (delta_val != 0) {
-                            console.log('obj: '+sobj+' header: '+header+ ' delta: '+delta_val);
+                            console.log('DELTA: obj: '+sobj+' header: '+header+ ' delta: '+delta_val);
                             addDelta(delta, sobj, header, delta_val);
                             delta_found = true;
                         }
                     } else if (cval != pval) {
-                        console.log('obj: '+sobj+' header: '+header+ ' new: '+cval+ ' old: '+pval);
+                        console.log('DELTA: obj: '+sobj+' header: '+header+ ' new: '+cval+ ' old: '+pval);
                         addDelta(delta, sobj, header, {"old":pval});
                         delta_found = true;
                     }
