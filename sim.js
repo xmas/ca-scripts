@@ -8,6 +8,116 @@ var _ = require('underscore');
 var moment = require('moment');
 var moniker = require('moniker');
 
+var industry = ['Agriculture',
+'Apparel',
+'Banking',
+'Biotechnology',
+'Chemicals',
+'Communications',
+'Construction',
+'Consulting',
+'Education',
+'Electronics',
+'Energy',
+'Engineering',
+'Entertainment',
+'Environmental',
+'Finance',
+'Food & Beverage',
+'Government',
+'Healthcare',
+'Hospitality',
+'Insurance',
+'Machinery',
+'Manufacturing',
+'Media',
+'Not for Profit',
+'Recreation',
+'Retail',
+'Shipping',
+'Technology',
+'Telecommunications',
+'Transportation',
+'Utilities',
+'Other'];
+
+var account_type = ['Analyst',
+'Press',
+'Competitor',
+'Prospect',
+'Customer',
+'Reseller',
+'Integrator',
+'Investor',
+'Partner',
+'Other'];
+
+var states = {
+    "AL": "Alabama",
+    "AK": "Alaska",
+    "AS": "American Samoa",
+    "AZ": "Arizona",
+    "AR": "Arkansas",
+    "CA": "California",
+    "CO": "Colorado",
+    "CT": "Connecticut",
+    "DE": "Delaware",
+    "DC": "District Of Columbia",
+    "FM": "Federated States Of Micronesia",
+    "FL": "Florida",
+    "GA": "Georgia",
+    "GU": "Guam",
+    "HI": "Hawaii",
+    "ID": "Idaho",
+    "IL": "Illinois",
+    "IN": "Indiana",
+    "IA": "Iowa",
+    "KS": "Kansas",
+    "KY": "Kentucky",
+    "LA": "Louisiana",
+    "ME": "Maine",
+    "MH": "Marshall Islands",
+    "MD": "Maryland",
+    "MA": "Massachusetts",
+    "MI": "Michigan",
+    "MN": "Minnesota",
+    "MS": "Mississippi",
+    "MO": "Missouri",
+    "MT": "Montana",
+    "NE": "Nebraska",
+    "NV": "Nevada",
+    "NH": "New Hampshire",
+    "NJ": "New Jersey",
+    "NM": "New Mexico",
+    "NY": "New York",
+    "NC": "North Carolina",
+    "ND": "North Dakota",
+    "MP": "Northern Mariana Islands",
+    "OH": "Ohio",
+    "OK": "Oklahoma",
+    "OR": "Oregon",
+    "PW": "Palau",
+    "PA": "Pennsylvania",
+    "PR": "Puerto Rico",
+    "RI": "Rhode Island",
+    "SC": "South Carolina",
+    "SD": "South Dakota",
+    "TN": "Tennessee",
+    "TX": "Texas",
+    "UT": "Utah",
+    "VT": "Vermont",
+    "VI": "Virgin Islands",
+    "VA": "Virginia",
+    "WA": "Washington",
+    "WV": "West Virginia",
+    "WI": "Wisconsin",
+    "WY": "Wyoming"
+}
+var state_keys = Object.keys(states);
+
+
+var sources = ['Phone Inquiry', 'Partner Referral', 'Purchased List', 'Web', 'Other'];
+var streets = ['Ave', 'Lane', 'Ct', 'Blvd'];
 
 if (typeof(process.env.SFORCE_CLIENT_ID) === 'undefined') {
     require('dotenv').config();
@@ -22,22 +132,16 @@ pgutil.orgAccessList(function(results) {
         console.log('get connection to org: '+access.orgid);
         conn = sfutil.getSFConnection(access);
 
-        simulate_opportunities(conn, handle_opps);
-
+        //simulate_opportunities(conn, handle_opps);
+        simulate_accounts(conn, handle);
 
 
     }
 });
 
-// Opportunities
-
-var handle_opps = function (err, updated_opps, new_opps) {
-    if (err) {
-        return console.error(err);
-    }
-
+var handle = function (err, SObject_type, updated, newones) {
     // update existing
-    conn.bulk.load("Opportunity", "upsert", {extIdField: "Id"}, updated_opps, function(err, rets) {
+    conn.bulk.load(SObject_type, "upsert", {extIdField: "Id"}, updated, function(err, rets) {
       if (err) { return console.error(err); }
       for (var i=0; i < rets.length; i++) {
         if (rets[i].success) {
@@ -46,11 +150,11 @@ var handle_opps = function (err, updated_opps, new_opps) {
           console.log("#" + (i+1) + " error occurred, message = " + rets[i].errors.join(', '));
         }
       }
-      console.log('FINALLY: finished loading Opportunity');
+      console.log('FINALLY: finished loading Account');
     });
 
     // load new
-    conn.bulk.load("Opportunity", "insert", new_opps, function(err, rets) {
+    conn.bulk.load(SObject_type, "insert", newones, function(err, rets) {
       if (err) { return console.error(err); }
       for (var i=0; i < rets.length; i++) {
         if (rets[i].success) {
@@ -59,9 +163,65 @@ var handle_opps = function (err, updated_opps, new_opps) {
           console.log("#" + (i+1) + " error occurred, message = " + rets[i].errors.join(', '));
         }
       }
-      console.log('FINALLY: finished loading Opportunity');
+      console.log('FINALLY: finished loading Account');
     });
 }
+
+// Accounts
+
+function simulate_accounts (conn, callback) {
+
+    var q = [];
+    var accounts = [];
+    var ratings = ['Hot', 'Warm', 'Cold'];
+
+    var a = new Promise( function(resolve) {
+        console.log('simming accounts');
+
+        conn.query("SELECT Id, Name, AnnualRevenue, Rating, Type FROM Account", function(err, result) {
+            if (err) { return console.error(err); }
+            console.log('got accounts: '+result.records.length);
+
+            accounts = result.records;
+
+            for (var accounts_i = 0; accounts_i < accounts.length; accounts_i++) {
+                var change_amount = (Math.random() < 0.1) ? randomIntInc(1,5)*(-1000) : randomIntInc(1,5)*(15000);
+                var account = accounts[accounts_i];
+                account.AnnualRevenue = account.AnnualRevenue + change_amount;
+                account.Rating = ratings[randomIntInc(0,2)];
+                accounts[accounts_i] = account;
+            }
+            resolve();
+
+        });
+    });
+    q.push(a);
+
+
+    Promise.all(q).then( function () {
+        console.log('Promise ALl THEN');
+
+        var employees = [2, 12, 50, 67, 89, 234, 4567, 43, 345, 546, 7889, 32, 94, 684, 120, 567, 8098, 15000, 100000];
+        var new_accounts = [];
+        var new_account = {};
+        new_account.Name = moniker.choose();
+        new_account.Industry = industry[randomIntInc(0, industry.length-1)];
+        new_account.Rating = ratings[randomIntInc(0,2)];
+        new_account.Type = account_type[randomIntInc(0, account_type.length-1)];
+        new_account.NumberOfEmployees = employees[randomIntInc(0, employees.length-1)];
+        new_account.ShippingState =  state_keys[randomIntInc(0,50)],
+        new_accounts.push(new_account);
+
+        console.log('UPDATE ACCOUNTS: '+JSON.stringify(accounts, null, 4));
+        console.log('NEW ACCOUNT: '+JSON.stringify(new_accounts, null, 4));
+
+        callback(null, 'Account', accounts, new_accounts);
+    });
+}
+
+
+// Opportunities
+
 
 function simulate_opportunities (conn, callback) {
 
@@ -150,18 +310,7 @@ function simulate_opportunities (conn, callback) {
                         new_opp.StageName = stages_by_order[current_stage];
                     }
                 }
-                // if (new_opp.StageName) {
-                //     console.log('  old stage: '+opp.StageName+' new stage: '+new_opp.StageName);
-                // }
 
-
-                // // close date
-                // if (Math.random() < 0.1) {
-                //     var current_close_date = moment(opp.CloseDate);
-                //     current_close_date.add(1, 'months');
-                //     new_opp.CloseDate = current_close_date.format('YYYY-MM-DD');
-                //
-                // }
                 new_opp.CloseDate = '2016-05-23';
 
                 // Opp Amount
@@ -198,7 +347,7 @@ function simulate_opportunities (conn, callback) {
         }
         console.log(JSON.stringify(new_opportunities, null, 4));
 
-        callback(null, opportunities, new_opportunities);
+        callback(null, 'Opportunity', opportunities, new_opportunities);
     });
 }
 
