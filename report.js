@@ -65,7 +65,7 @@ function evalReport (reportId, sfacesss, sfconn, callback) {
             console.error('report exection error');
             return console.error(err);
         }
-        //saveOutput("full.json", JSON.stringify(report));
+        saveOutput("full.json", JSON.stringify(report));
         var headers = createColumnHeaders(report);
         report.headers = headers;
         var groupingsDown = report.groupingsDown.groupings;
@@ -126,6 +126,8 @@ function promiseGrouping (parentGroup, path, report, level, insights, callback) 
         clone_path.push(path_node);
 
         var eval_data_promise = new Promise( function(resolve) {
+
+
             evalData(group, clone_path, report, level, function(insight) {
                 if (insight != null) {
                     //console.log('PUSH to insights: '+insight.Name);
@@ -153,13 +155,43 @@ function promiseGrouping (parentGroup, path, report, level, insights, callback) 
 }
 
 
+function getAggregateHeaders (report, keyT){
+    // aggregate columns
+    var data = report.factMap[keyT];
 
+    var aggregate_header_order = report.reportMetadata.aggregates;
+    var aggregate_header_data = report.reportExtendedMetadata.aggregateColumnInfo;
+    var aggregate_headers = [];
 
+    for (var header_index = 0; header_index < aggregate_header_order.length; header_index++) {
+        var header_key = aggregate_header_order[header_index];
+        // console.log(header_index+' - header key: '+header_key);
+        // console.log(' label: '+aggregate_header_data[header_key].label);
+        // console.log(' value: '+data.aggregates[header_index].value);
+        aggregate_headers.push(aggregate_header_data[header_key]);
+    }
+    return aggregate_headers;
+}
 
+function getDataCellHeaders (report, keyT) {
+    var data = report.factMap[keyT];
+
+    // data cell headers
+    var header_order = report.reportMetadata.detailColumns;
+    var header_data = report.reportExtendedMetadata.detailColumnInfo;
+    var headers = [];
+    for (var header_index = 0; header_index < header_order.length; header_index++) {
+        var header_key = header_order[header_index];
+        //console.log('header key: '+header_key);
+        headers.push(header_data[header_key]);
+    }
+    return headers;
+}
 
 function evalData (group, path, report, level, callback) {
-    //console.log('EVAL DATA --- path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
+    console.log('EVAL DATA --- path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
 
+    // All data
     var keyT = group.key+'!T';
     var data = report.factMap[keyT];
     var count = data.rows.length;
@@ -170,22 +202,13 @@ function evalData (group, path, report, level, callback) {
     store.label = group.label;
     store.value = group.value;
 
-    var header_order = report.reportMetadata.detailColumns;
-    var header_data = report.reportExtendedMetadata.detailColumnInfo;
-    var headers = [];
-    for (var header_index = 0; header_index < header_order.length; header_index++) {
-        var header_key = header_order[header_index];
-        //console.log('header key: '+header_key);
-        headers.push(header_data[header_key]);
-    }
-    store.headers = headers;
 
+    store.headers = getDataCellHeaders(report, keyT);
+    store.aggregate_headers = getAggregateHeaders(report, keyT);
 
-    // now that we have our store, we can compare the the previous values
+    //return callback();
 
-    // diff.calculateDiff(access.orgid, arrayFromKey(path, "value").join("/"), store);
-    // console.log('BACK IN REPORTS');
-
+    // TODO: if there isn't any new data that means that everything was removed, so we still need to generate an insight
     if ((data.rows.length <= 0) || (count === 0)) {
         // TODO: always return... use old data if we don't have new data? There is value in knowing that things have been removed.
         callback(); // If we miss a callback then bad things happen since the entire callback chain gets fudged
@@ -215,8 +238,6 @@ function evalData (group, path, report, level, callback) {
         });
     }
 
-
-
 }
 
 function evalInsight(store, group, path, report, level, count, counts, callback) {
@@ -231,9 +252,7 @@ function evalInsight(store, group, path, report, level, count, counts, callback)
     var typeLabel = report.reportMetadata.reportType.label;
     var labelPath = arrayFromKey(path, "label").join(" > ");
 
-    insight.Name = '('+ count +') '+typeLabel+' from '+report.attributes.reportName;
-    //insight.Long_Name__c = '('+ count +') '+typeLabel+' matching: '+labelPath
-    var table = buildTable(report.headers, data.rows);
+    var table = buildTable(store.headers, data.rows);
     insight.Table_Data__c = table;
 
     insight.Details__c = count+' '+report.reportMetadata.reportType.label+' found.';
@@ -253,19 +272,26 @@ function evalInsight(store, group, path, report, level, count, counts, callback)
 
     // new or changed [Report_Type_Label__c] where [PATH Label [2]] is [Path Value [2]] and [PATH Label [3]] is [Path Value [3]].
 
+
     var new_or_changed = insight.Today_New__c + insight.Today_Changed__c;
 
     var long_title = 'Found '+stringForNumber(new_or_changed)+' new or changed <span class="sobject-link">'+report.reportMetadata.reportType.label+'</span>';
     var where_string = "";
+    var short_type = report.reportMetadata.reportType.label;
+    if (short_type.length > 15) {
+        short_type = short_type.substring(0,14)+'…';
+    }
+
+    var short_title = stringForNumber(new_or_changed) + ' updated '+short_type;
 
     if (path.length > 1) {
-
+        short_title = short_title+' (';
         where_string = ' where '
         var parents = "";
         //'<ul class="slds-list--horizontal slds-has-dividers--right slds-has-inline-block-links">';
 
         for (var i = 1; i < path.length; i++) {
-            var groupingColumnInfo =  groupingColumnInfoForLevel(i -1, report);
+            var groupingColumnInfo =  groupingColumnInfoForLevel(i-1, report);
             //console.log(JSON.stringify(groupingColumnInfo));
             var node = path[i];
             var dataType = groupingColumnInfo.dataType;
@@ -273,8 +299,11 @@ function evalInsight(store, group, path, report, level, count, counts, callback)
             if (i > 1) {
                 if ( i > 2) {
                     where_string = where_string + ' and ';
+                    short_title = short_title + ', ';
+
                 }
                 where_string = where_string + groupingColumnInfo.label.toLowerCase()+' is <span class="sobject-link"> ';
+                short_title = short_title+groupingColumnInfo.label.toLowerCase()+': '+node.label;
             }
             if (node.value != null && dataType === "string") {
                 var myRe = /(\d\d\d\d\d)/;
@@ -311,16 +340,19 @@ function evalInsight(store, group, path, report, level, count, counts, callback)
     insight.Long_Name__c = long_title;
     var desc = 'There are '+stringForNumber(insight.Today_New__c)+' new and '+stringForNumber(insight.Today_Changed__c)+' changed <span class="sobject-link">'+report.reportMetadata.reportType.label+'</span>. There are '+stringForNumber(insight.Today_Total__c)+' '+report.reportMetadata.reportType.label.toLowerCase()+' matching this filter.';
 
-
+    short_title = short_title+').';
 
     insight.Details__c = desc;
+    insight.Name = short_title;
 
+    //insight.Long_Name__c = '('+ count +') '+typeLabel+' matching: '+labelPath
     //console.log('Insight created: '+insight.Name);
     //console.log('         EVAL DATA --- path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
 
     //console.log(insight);
-    var saveToS3 = true;
-    saveOutput('store.json', JSON.stringify(store), path, saveToS3);
+    var saveToS3 = false;
+    var saveToDisk = true;
+    saveOutput('store.json', JSON.stringify(store), path, saveToS3, saveToDisk);
     callback(insight);
 }
 
@@ -443,82 +475,38 @@ function evalMetaData (reportId) {
 }
 
 
+function saveOutput (filename, output, path, saveToS3, saveToDisk, callback) {
 
-
-function getReports() {
-    conn.analytics.reports(function(err, reports) {
-        if (err) { return console.error(err); }
-
-        console.log("reports length: "+reports.length);
-
-        var lines = [];
-        for (var i=0; i < 18; i++) {
-            // console.log(reports[i].id);
-            // console.log(reports[i].name);
-            // var line = [reports[i].id, reports[i].name];
-            //lines.push(reports[i].id);
-            evalReport(reports[i].id);
-            // if ( i % 5) {
-            //     suspend();
-            // }
-        }
-        //saveOutput("out.json", JSON.stringify(lines));
-
-
-        // var answer = {};
-        // answer['title'] = 'Report List';
-        // answer['details'] = 'Found '+lines.length + ' reports.';
-        // answer['path'] = 'reportList';
-        // answer['guid'] = '0';
-        // saveOutput("answer.json", JSON.stringify(answer));
-    });
-
-
-}
-
-// function suspend() {
-//     sleep.sleep(30000);
-// }
-
-
-function saveOutput (filename, output, path, saveToS3, callback) {
-
-    if (path) {
-        var dir = "";
-        if (access && saveToS3 ) {
-            dir = arrayFromKey(path, "value").join("/");
-        } else {
-            dir = arrayFromKey(path, "value").join(".");
-        }
-    }
-
-    if (access) {
+    if (access && saveToS3) {
         // we have an access object so we'll use S3
-        if (dir) {
-            filename = dir+'/'+filename;
+
+        var dir = "";
+        if (path) {
+            dir = arrayFromKey(path, "value").join("/");
         }
 
-        s3.uploadObject(access.orgid, filename, output, function(result) {
+        var s3_filename = filename;
+        if (dir) {
+            s3_filename = dir+'/'+s3_filename;
+        }
+
+        s3.uploadObject(access.orgid, s3_filename, output, function(result) {
             console.log(result);
         });
-
-        return;
     }
 
-    // if (dir && !fs.existsSync(dir)){
-    //     fs.mkdirSync(dir);
-    //     filename = dir+'/'+filename;
-    // }
+    if (saveToDisk) {
 
-    if (dir) {
-        filename = dir+'.'+filename;
-    }
-
-    fs.writeFile(filename, output, function(err) {
-        if(err) {
-            return console.log(err);
+        if (path) {
+            path = arrayFromKey(path, "value").join(".");
+            filename = path+'.'+filename;
         }
 
-        console.log("The file was saved!");
-    });
+        fs.writeFile(filename, output, function(err) {
+            if(err) {
+                return console.log(err);
+            }
+            console.log(filename+" was saved!");
+        });
+    }
 }
