@@ -252,7 +252,7 @@ function evalInsight(store, group, path, report, level, count, counts, callback)
     var typeLabel = report.reportMetadata.reportType.label;
     var labelPath = arrayFromKey(path, "label").join(" > ");
 
-    var table = buildTable(store.headers, data.rows);
+    var table = buildTable(arrayFromKey(store.headers, "label"), data.rows);
     insight.Table_Data__c = table;
 
     insight.Details__c = count+' '+report.reportMetadata.reportType.label+' found.';
@@ -350,8 +350,8 @@ function evalInsight(store, group, path, report, level, count, counts, callback)
     //console.log('         EVAL DATA --- path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
 
     //console.log(insight);
-    var saveToS3 = false;
-    var saveToDisk = true;
+    var saveToS3 = true;
+    var saveToDisk = false;
     saveOutput('store.json', JSON.stringify(store), path, saveToS3, saveToDisk);
     callback(insight);
 }
