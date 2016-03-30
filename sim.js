@@ -118,6 +118,7 @@ var state_keys = Object.keys(states);
 
 var sources = ['Phone Inquiry', 'Partner Referral', 'Purchased List', 'Web', 'Other'];
 var streets = ['Ave', 'Lane', 'Ct', 'Blvd'];
+var origins = ['Phone', 'Email', 'Web'];
 
 if (typeof(process.env.SFORCE_CLIENT_ID) === 'undefined') {
     require('dotenv').config();
@@ -132,9 +133,9 @@ pgutil.orgAccessList(function(results) {
         console.log('get connection to org: '+access.orgid);
         conn = sfutil.getSFConnection(access);
 
-        //simulate_opportunities(conn, handle_opps);
+        simulate_opportunities(conn, handle);
         simulate_accounts(conn, handle);
-
+        simulate_cases(conn, handle);
 
     }
 });
@@ -165,6 +166,106 @@ var handle = function (err, SObject_type, updated, newones) {
       }
       console.log('FINALLY: finished loading Account');
     });
+}
+
+// // leads
+// function simulate_cases (conn, callback) {
+//
+//     var leads = [];
+//     for (var i = 0; i < 10; i++) {
+//
+//         leads.push({
+//                 FirstName : moniker.choose(),
+//                 LastName : moniker.choose(),
+//                 State: keys[randomIntInc(0,50)],
+//                 //City: 'Seattle',
+//                 //PostalCode: '98177',
+//                 Street: randomIntInc(134,56678)+' '+moniker.choose()+ ' '+streets[randomIntInc(0,3)],
+//                 LeadSource: sources[randomIntInc(0,4)],
+//                 Company: moniker.choose()
+//
+//         });
+//     }
+//
+//     // Multiple records creation
+//     conn.sobject("Lead").create(leads,
+//     function(err, rets) {
+//         if (err) { return console.error(err); }
+//         for (var i=0; i < rets.length; i++) {
+//             if (rets[i].success) {
+//                 console.log("Created record id : " + rets[i].id);
+//             }
+//         }
+//         // ...
+//     });
+
+
+// cases
+function simulate_cases (conn, callback) {
+
+    var q = [];
+    var accounts = [];
+    var contacts = [];
+    var cases = [];
+
+    var a = new Promise( function(resolve) {
+        conn.query("SELECT Id, Name FROM Account", function(err, result) {
+            if (err) { return console.error(err); }
+            for (var accounts_i = 0; accounts_i < result.records.length; accounts_i++) {
+                accounts.push(result.records[accounts_i].Id);
+            }
+            resolve();
+        });
+    });
+    q.push(a);
+
+    var b = new Promise( function(resolve) {
+        conn.query("SELECT Id, Name FROM Contact", function(err, result) {
+            if (err) { return console.error(err); }
+            for (var contacts_i = 0; contacts_i < result.records.length; contacts_i++) {
+                contacts.push(result.records[contacts_i].Id);
+            }
+            resolve();
+
+        });
+    });
+    q.push(b);
+
+
+    var c = new Promise( function(resolve) {
+        conn.query("SELECT Id, Status FROM Case WHERE Status = 'New'", function(err, result) {
+
+            if (err) { return console.error(err); }
+            for (var cases_i = 0; cases_i < result.records.length; cases_i++) {
+                var ccase = result.records[cases_i];
+                if (Math.random() < 0.2) {
+                    ccase.Status = 'Closed';
+                    cases.push(ccase);
+                }
+            }
+            resolve();
+
+        });
+    });
+    q.push(c);
+
+    Promise.all(q).then( function () {
+        var new_cases = [];
+        for (var i = 0; i < 10; i++) {
+            new_cases.push({
+                ContactId : contacts[randomIntInc(0, contacts.length)],
+                AccountId : accounts[randomIntInc(0, accounts.length)],
+                Description : moniker.choose(),
+                Subject: moniker.choose(),
+                Status: 'New',
+                Origin: origins[randomIntInc(0, contacts.origins)]
+            });
+        }
+
+
+        callback(null, 'Case', cases, new_cases);
+    });
+
 }
 
 // Accounts
