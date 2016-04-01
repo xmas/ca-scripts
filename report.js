@@ -37,7 +37,16 @@ function evalReportFolder (folderName, sfacess, sfconn, callback) {
                         //console.log('in eval report, calling back with some this many datas: '+results.length+' prior total: '+total_insights.length);
                         total_insights = total_insights.concat(results);
                         //console.log('and the new total is: '+total_insights.length);
-                        resolve();
+
+                        console.log("do smaller batches, one report at a time");
+                        for (var r = 0; r < results.length; r++) {
+                            console.log('result: '+results[r].Name);
+                        }
+                        sfutil.upsertInsights(conn, results, function (res) {
+                            console.log('back in worker js: '+res);
+                            resolve();
+                        });
+
                     });
                 });
                 report_promises.push(eval_report_promise);
@@ -349,6 +358,16 @@ function evalInsight(store, group, path, report, level, count, counts, callback)
     //console.log('Insight created: '+insight.Name);
     //console.log('         EVAL DATA --- path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
 
+    console.log(insight.Name+'--------->>');
+    if (insight.AssocID__c) {
+        console.log(insight.Name+' assoc1: '+insight.Assoc1ID__c+ ' label: '+insight.AssocLabel__c)
+    }
+    if (insight.Assoc2ID__c) {
+        console.log(insight.Name+' assoc2: '+insight.Assoc2ID__c+ ' label: '+insight.AssocLabel2__c)
+    }
+    if (insight.Assoc3ID__c) {
+        console.log(insight.Name+' assoc3: '+insight.Assoc3ID__c+ ' label: '+insight.AssocLabel3__c)
+    }
     //console.log(insight);
     var saveToS3 = true;
     var saveToDisk = false;
