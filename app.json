@@ -1,0 +1,44 @@
+{
+  "name": "Current Actions Data Pipeline",
+  "description": "Data pipeline and analysis for Salesforce.",
+  "keywords": [
+    "productivity",
+    "analytics",
+    "data",
+    "Salesforce"
+  ],
+  "website": "https://www.currentactions.com",
+  "repository": "https://github.com/xmas/ca-scripts",
+  "success_url": "/welcome",
+  "scripts": {
+    "postdeploy": "bundle exec rake bootstrap"
+  },
+  "env": {
+    "AWS_ACCESS_KEY_ID": {
+      "description": "AWS access key.",
+    },
+    "AWS_SECRET_ACCESS_KEY": {
+      "description": "AWS secret access key.",
+    },
+    "SFORCE_CALLBACK": {
+      "description": "The name of the new heroku instance. This needs to match the OAuth connected app callback.",
+    },
+    "SFORCE_CLIENT_ID": {
+      "description": "Salesforce OAuth connected app ID.",
+    },
+    "SFORCE_SECRET": {
+      "description": "Salesforce OAuth connected app secret. But maybe I don't need this with OAuth?",
+    }
+
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "free"
+    }
+  },
+  "image": "heroku/nodejs",
+  "addons": [
+    "heroku-postgresql:hobby-dev"
+  ]
+}
