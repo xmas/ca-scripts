@@ -15,19 +15,19 @@
   },
   "env": {
     "AWS_ACCESS_KEY_ID": {
-      "description": "AWS access key.",
+      "description": "AWS access key."
     },
     "AWS_SECRET_ACCESS_KEY": {
-      "description": "AWS secret access key.",
+      "description": "AWS secret access key."
     },
     "SFORCE_CALLBACK": {
-      "description": "The name of the new heroku instance. This needs to match the OAuth connected app callback.",
+      "description": "The name of the new heroku instance. This needs to match the OAuth connected app callback."
     },
     "SFORCE_CLIENT_ID": {
-      "description": "Salesforce OAuth connected app ID.",
+      "description": "Salesforce OAuth connected app ID."
     },
     "SFORCE_SECRET": {
-      "description": "Salesforce OAuth connected app secret. But maybe I don't need this with OAuth?",
+      "description": "Salesforce OAuth connected app secret. But maybe I don't need this with OAuth?"
     }
 
   },
