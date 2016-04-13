@@ -10,9 +10,6 @@
   "website": "https://www.currentactions.com",
   "repository": "https://github.com/xmas/ca-scripts",
   "success_url": "/welcome",
-  "scripts": {
-    "postdeploy": "bundle exec rake bootstrap"
-  },
   "env": {
     "AWS_ACCESS_KEY_ID": {
       "description": "AWS access key."
