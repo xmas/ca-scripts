@@ -35,8 +35,12 @@
     "web": {
       "quantity": 1,
       "size": "free"
+    },
+    "worker": {
+        "quantity": 1,
+        "size": "free"
     }
-  },
+},
   "image": "heroku/nodejs",
   "addons": [
     "heroku-postgresql:hobby-dev"
