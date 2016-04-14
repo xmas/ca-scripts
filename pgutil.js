@@ -47,7 +47,7 @@ function setupDatabase (cb) {
 
     pg.connect(process.env.DATABASE_URL, function(err, client, done) {
 
-        var sql = 'CREATE TABLE "sforg-test" (id serial primary key, instanceurl text, access_token text, refresh_token text, userid text, orgid text, UNIQUE ("orgid") )';
+        var sql = 'CREATE TABLE "sforg" (id serial primary key, instanceurl text, access_token text, refresh_token text, userid text, orgid text, UNIQUE ("orgid") )';
         client.query(sql, function(err, result) {
             if (err) {
                 console.log('ERROR FROM POSTGRES: '+err);
