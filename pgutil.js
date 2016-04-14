@@ -3,7 +3,8 @@
 // declare public exports
 module.exports = {
   upsertAccess: upsertAccess,
-  orgAccessList: orgAccessList
+  orgAccessList: orgAccessList,
+  setupDatabase : setupDatabase
 }
 
 var pg = require('pg');
@@ -41,3 +42,21 @@ function orgAccessList(cb) {
     });
     pg.end(); // close the pg.connect session
 };
+
+function setupDatabase (cb) {
+
+    pg.connect(process.env.DATABASE_URL, function(err, client, done) {
+
+        var sql = 'CREATE TABLE "sforg-test" (id serial primary key, instanceurl text, access_token text, refresh_token text, userid text, orgid text, UNIQUE ("orgid") )';
+        client.query(sql, function(err, result) {
+            if (err) {
+                console.log('ERROR FROM POSTGRES: '+err);
+            } else {
+                cb(result); // callback with the results
+                done(); // indicate that this pg client is done
+            }
+        });
+    });
+    pg.end(); // close the pg.connect session
+
+}
