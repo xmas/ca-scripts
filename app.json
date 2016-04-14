@@ -1,6 +1,7 @@
 {
   "name": "Current Actions Data Pipeline",
   "description": "Data pipeline and analysis for Salesforce.",
+  "logo": "https://raw.githubusercontent.com/xmas/ca-scripts/master/brain_red.png",
   "keywords": [
     "productivity",
     "analytics",
