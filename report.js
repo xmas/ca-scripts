@@ -231,6 +231,8 @@ function evalData (group, path, report, level, callback) {
             counts.changed_count = 0;
             if (data) {
                 var prev = JSON.parse(data.toString());
+                console.log('DIFFING DATA --- path: '+arrayFromKey(path, "value").join(".")+' key: '+group.key+' label: '+group.label+' value: '+group.value+' level: '+level);
+                console.log(JSON.stringify(prev, null, 4));
                 diff.evaldiff(store, prev, function (returned_delta, new_count, deleted_count, changed_count){
                     delta = returned_delta;
                     counts.new_count = new_count;

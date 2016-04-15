@@ -28,6 +28,21 @@ function evaldiff(current, prev, callback) {
 
     var objs = [];
 
+    if (_.isUndefined(prev.headers) || _.isUndefined(prev.data)) {
+        console.log('undefined data for previous data source:'+ JSON.stringify(prev, null, 4));
+         callback(current, 0, 0, 0);
+         return;
+    } else {
+        console.log('Correct data for previous data source:'+ JSON.stringify(prev, null, 4));
+
+    }
+
+    if (_.isUndefined(current.headers) || _.isUndefined(current.data)) {
+        console.log('undefined data for current data source:'+ JSON.stringify(current, null, 4));
+        callback(current, 0, 0, 0);
+        return;
+    }
+
     var p_row_map = mappifyRows(prev.data.rows, prev.headers, objs);
     var c_row_map = mappifyRows(current.data.rows, current.headers, objs);
 
