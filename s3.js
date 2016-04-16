@@ -147,7 +147,7 @@ function uploadObject(bucket, key, object, callback) {
 
     var s3bucket = new AWS.S3({params: {Bucket: bucket}});
     s3bucket.createBucket(function() {
-      var params = {Key: key, Body: object};
+      var params = {Key: key, Body: object, ServerSideEncryption: 'AES256'};
       s3bucket.upload(params, function(err, data) {
         if (err) {
             console.log("Error uploading data: ", err);
