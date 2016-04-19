@@ -14,7 +14,7 @@ var oauth2 = new jsforce.OAuth2({
   redirectUri : process.env.SFORCE_CALLBACK
 });
 
-app.get('/webhook/', function (req, res) {
+app.get('/webhook', function (req, res) {
   if (req.query['hub.verify_token'] === 'rowan_is_great') {
     res.send(req.query['hub.challenge']);
   }
