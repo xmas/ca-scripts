@@ -37,7 +37,7 @@ app.post('/webhook/', function (req, res) {
       text = event.message.text;
       sendTextMessage(sender, "Text received, echo: "+ text.substring(0, 200));    }
   }
-  res.sendStatus(200);
+  res.status(200).send();
 });
 
 var token = "CAANxaSNrKBYBAG2ybGaZCLtgS8Mk1TWmfduCyuPxWLiVXnLnIwZBEawWcQ9ZA31zw6NnsJLt1tZAtiHixNqogs54k2FR28YEZBTtRce2kNXpTqXWibPIyLkMhYL2rkuKQ4sWmalXgQZAAsW7hn7n9fZB5TnRl2wdh25IF9dyyLp5JsQN9ZBGbGFhZC7iNptgwLr4ZD";
