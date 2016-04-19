@@ -9,6 +9,7 @@ var _ = require('underscore');
 var pgutil = require('./pgutil.js');
 
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
 
 var oauth2 = new jsforce.OAuth2({
