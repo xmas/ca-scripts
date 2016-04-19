@@ -8,6 +8,9 @@ var pg = require('pg');
 var _ = require('underscore');
 var pgutil = require('./pgutil.js');
 
+app.use(bodyParser.urlencoded({ extended: true }));
+
+
 var oauth2 = new jsforce.OAuth2({
   clientId : process.env.SFORCE_CLIENT_ID,
   clientSecret : process.env.SFORCE_SECRET,
