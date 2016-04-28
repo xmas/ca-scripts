@@ -14,34 +14,39 @@ pgutil.orgAccessList(function(results) {
 
     for (var i = 0; i < orgs.length; i++) {
         var access = orgs[i];
-        console.log('get connection to org: '+access.orgid);
-        var conn = sfutil.getSFConnection(access);
+        console.log(access);
+        if (access.orgid === '00D61000000adM6EAI') {
 
-        s3.ensureBucket(access.orgid, function() {
+            console.log('get connection to org: '+access.orgid);
+            var conn = sfutil.getSFConnection(access);
 
-            report.evalReportFolder('Current Actions', access, conn, function (results) {
-                console.log('back in workder.js, and we have tons of insights now: '+results.length);
-                for (var r = 0; r < results.length; r++) {
-                    console.log('result: '+results[r].Name);
-                }
-                // sfutil.upsertInsights(conn, results, function (res) {
-                //     console.log('back in worker js: '+res);
+            s3.ensureBucket(access.orgid, function() {
+
+                // report.evalReportFolder('Current Actions', access, conn, function (results) {
+                //     console.log('back in workder.js, and we have tons of insights now: '+results.length);
+                //     for (var r = 0; r < results.length; r++) {
+                //         console.log('result: '+results[r].Name);
+                //     }
+                //     // sfutil.upsertInsights(conn, results, function (res) {
+                //     //     console.log('back in worker js: '+res);
+                //     // });
                 // });
+
+                report.evalReport('00O61000003tTFS', access, conn, function (results) {
+                    console.log('back in and upserting insights for the single report: '+results.length);
+                    for (var r = 0; r < results.length; r++) {
+                        console.log('result: '+results[r].Name);
+                    }
+                    sfutil.upsertInsights(conn, results, function (res) {
+                        console.log('back in worker js: '+res);
+                    });
+                });
+
+
+
             });
+        }
 
-            // report.evalReport('00O61000003tNiXEAU', access, conn, function (results) {
-            //     console.log('back in and upserting insights for the single report: '+results.length);
-            //     for (var r = 0; r < results.length; r++) {
-            //         console.log('result: '+results[r].Name);
-            //     }
-            //     sfutil.upsertInsights(conn, results, function (res) {
-            //         console.log('back in worker js: '+res);
-            //     });
-            // });
-
-
-
-        });
     }
 
 });

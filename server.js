@@ -18,6 +18,12 @@ var oauth2 = new jsforce.OAuth2({
   redirectUri : process.env.SFORCE_CALLBACK
 });
 
+var bot_oauth2 = new jsforce.OAuth2({
+  clientId : process.env.SFORCE_CLIENT_ID_BOT,
+  clientSecret : process.env.SFORCE_SECRET_BOT,
+  redirectUri : process.env.SFORCE_CALLBACK_BOT
+});
+
 app.get('/webhook/', function (req, res) {
   if (req.query['hub.verify_token'] === 'rowan_is_great') {
     res.send(req.query['hub.challenge']);
@@ -97,6 +103,39 @@ app.get('/auth/salesforce/callback' , function(req, res) {
 
 
         pgutil.upsertAccess(access);
+        res.send(fs.readFileSync('html/auth_success.html', 'utf8'));
+    });
+});
+
+app.get('/auth/bot/callback' , function(req, res) {
+    var conn = new jsforce.Connection({ oauth2 : bot_oauth2 });
+    var code = req.param('code');
+    conn.authorize(code, function(err, userInfo) {
+        if (err) { return console.error(err); }
+        // Now you can get the access token, refresh token, and instance URL information.
+        // Save them to establish connection next time.
+        console.log('------BOT-------');
+        console.log('access token: '+conn.accessToken);
+        console.log('refresh token: :'+conn.refreshToken);
+        console.log('instance url: '+conn.instanceUrl);
+        console.log("User ID: " + userInfo.id);
+        console.log("Org ID: " + userInfo.organizationId);
+        // ...
+
+        var access = {
+        access_token : conn.accessToken,
+        refresh_token : conn.refreshToken,
+        instanceUrl : conn.instanceUrl,
+        userid : userInfo.id,
+        orgid : userInfo.organizationId};
+
+        console.log(JSON.stringify(access));
+
+
+        saveOutput('access.json', JSON.stringify(access), '.');
+
+
+        // pgutil.upsertAccess(access);
         res.send(fs.readFileSync('html/auth_success.html', 'utf8'));
     });
 });

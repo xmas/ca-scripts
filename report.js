@@ -12,6 +12,7 @@ var fs = require('fs');
 var _ = require('underscore');
 var s3 = require('./s3.js');
 var diff = require('./diff.js');
+var schemata = require('./schemata.js');
 var Promise = require("bluebird");
 
 var conn = {};
@@ -74,7 +75,9 @@ function evalReport (reportId, sfacesss, sfconn, callback) {
             console.error('report exection error');
             return console.error(err);
         }
-        saveOutput("full.json", JSON.stringify(report));
+        saveOutput("full.json", JSON.stringify(report), '', false, true);
+        //saveOutput('store.json', JSON.stringify(store), path, saveToS3, saveToDisk);
+
         var headers = createColumnHeaders(report);
         report.headers = headers;
         var groupingsDown = report.groupingsDown.groupings;
@@ -264,6 +267,37 @@ function evalInsight(store, group, path, report, level, count, counts, callback)
     var labelPath = arrayFromKey(path, "label").join(" > ");
 
     var table = buildTable(arrayFromKey(store.headers, "label"), data.rows);
+    var db_headers = _.clone(report.reportMetadata.detailColumns);
+    for (var i = 0; i < db_headers.length; i++) {
+        db_headers[i] = db_headers[i].replace(/\W+/g, "_");
+    }
+    var csv = buildCSV(db_headers, data.rows);
+
+    var schemata_headers = [];
+    var cols = report.reportMetadata.detailColumns;
+    for (var i = 0; i < cols.length; i++) {
+        var detailInfo = _.clone(report.reportExtendedMetadata.detailColumnInfo[cols[i]]);
+        detailInfo.databaseName = cols[i].replace(/\W+/g, "_");
+        schemata_headers.push(detailInfo);
+    }
+    var schemata_obj = {};
+    schemata_obj.name = report.attributes.reportId;
+    schemata_obj.headers = schemata_headers;
+    var tableId;
+    console.log('about to upsert schemata table');
+    schemata.upsertTable(schemata_obj, function (id, result) {
+        console.log("schemata table prepared for "+report.attributes.reportId+' ::: '+report.attributes.reportName);
+        console.log(result);
+        tableId = id;
+
+        saveOutput('store.csv', csv, arrayFromKey(path, "value").join("/"), true, true, function(location) {
+            console.log('sending the CSV to schemata: '+location);
+            schemata.apppendData(id, location, function (response){
+                console.log('SENT DATA TO SCHEMATA FOR:'+report.attributes.reportId+' ::: '+report.attributes.reportName);
+            })
+        });
+    });
+
     insight.Table_Data__c = table;
 
     insight.Details__c = count+' '+report.reportMetadata.reportType.label+' found.';
@@ -374,6 +408,9 @@ function evalInsight(store, group, path, report, level, count, counts, callback)
     var saveToS3 = true;
     var saveToDisk = false;
     saveOutput('store.json', JSON.stringify(store), path, saveToS3, saveToDisk);
+
+    //console.log('csv saved to path: '+path);
+
     callback(insight);
 }
 
@@ -438,6 +475,27 @@ function buildTable (headers, rows) {
 
     return html;
 }
+
+function buildCSV (headers, rows) {
+
+    if (rows.length != 0 && headers.length != rows[0].dataCells.length) {
+        console.log("ERROR mismatch in lengths: "+headers+ " --- "+ rows[0].dataCells);
+        return;
+    }
+
+    var csv = headers.join(",");
+
+    for (var i = 0; i < rows.length; i++) {
+        var cells = rows[i].dataCells;
+        csv += "\n";
+        csv += "\"";
+        csv += arrayFromKey(cells, "label").join("\",\"");
+        csv += "\"";
+    }
+    //console.log(csv);
+    return csv;
+}
+
 
 function arrayFromKey (array, key) {
     var new_array = [];
@@ -513,6 +571,7 @@ function saveOutput (filename, output, path, saveToS3, saveToDisk, callback) {
 
         s3.uploadObject(access.orgid, s3_filename, output, function(result) {
             console.log(result);
+            callback(s3_filename);
         });
     }
 

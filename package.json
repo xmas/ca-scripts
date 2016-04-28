@@ -9,7 +9,8 @@
     "nodemailer": "^2.3.2",
     "passport": "^0.3.2",
     "pg": "4.5.1",
-    "request": "~2.36.0",
+    "request": "^2.36.0",
+    "request-promise": "^3.0.0",
     "underscore": "^1.8.3"
   }
 }
