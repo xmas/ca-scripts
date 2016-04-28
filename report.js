@@ -290,7 +290,7 @@ function evalInsight(store, group, path, report, level, count, counts, callback)
         console.log(result);
         tableId = id;
 
-        saveOutput('store.csv', csv, arrayFromKey(path, "value").join("/"), true, true, function(location) {
+        saveOutput('store.csv', csv, path, true, true, function(location) {
             console.log('sending the CSV to schemata: '+location);
             schemata.apppendData(id, location, function (response){
                 console.log('SENT DATA TO SCHEMATA FOR:'+report.attributes.reportId+' ::: '+report.attributes.reportName);
