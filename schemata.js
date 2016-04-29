@@ -29,6 +29,8 @@ function appendData (tableId, objectName, callback) {
         url: baseurl+'/table/appendData?tableId='+tableId+'&objectName='+objectName
     };
 
+    console.log(options.url);
+
     request(options, function (error, response, body) {
         if (error) throw new Error(error);
 
@@ -57,6 +59,7 @@ function tableIdForName(tableName, callback) {
 function upsertTable(tableData, callback) {
 
     console.log('upserting data');
+    console.log(JSON.stringify(tableData, null, 4));
 
     tableIdForName( tableData.name, function(existingTableId) {
 

@@ -76,7 +76,7 @@ function evalReport (reportId, sfacesss, sfconn, callback) {
             return console.error(err);
         }
         saveOutput("full.json", JSON.stringify(report), '', false, true);
-        //saveOutput('store.json', JSON.stringify(store), path, saveToS3, saveToDisk);
+        //saveOutput('store.json', JSON.stringify(store), path, false, saveToDisk);
 
         var headers = createColumnHeaders(report);
         report.headers = headers;
@@ -267,21 +267,29 @@ function evalInsight(store, group, path, report, level, count, counts, callback)
     var labelPath = arrayFromKey(path, "label").join(" > ");
 
     var table = buildTable(arrayFromKey(store.headers, "label"), data.rows);
+    console.log(report.reportMetadata.detailColumns);
     var db_headers = _.clone(report.reportMetadata.detailColumns);
     for (var i = 0; i < db_headers.length; i++) {
         db_headers[i] = db_headers[i].replace(/\W+/g, "_");
     }
     var csv = buildCSV(db_headers, data.rows);
-
+    console.log(csv);
     var schemata_headers = [];
     var cols = report.reportMetadata.detailColumns;
     for (var i = 0; i < cols.length; i++) {
-        var detailInfo = _.clone(report.reportExtendedMetadata.detailColumnInfo[cols[i]]);
+        var detailInfo = report.reportExtendedMetadata.detailColumnInfo[cols[i]];
         detailInfo.databaseName = cols[i].replace(/\W+/g, "_");
-        schemata_headers.push(detailInfo);
+
+        var node = {};
+        node.label = detailInfo.label;
+        node.databaseName = cols[i].replace(/\W+/g, "_");
+        node.type = detailInfo.dataType;
+
+
+        schemata_headers.push(node);
     }
     var schemata_obj = {};
-    schemata_obj.name = report.attributes.reportId;
+    schemata_obj.name = report.attributes;
     schemata_obj.headers = schemata_headers;
     var tableId;
     console.log('about to upsert schemata table');
@@ -489,7 +497,19 @@ function buildCSV (headers, rows) {
         var cells = rows[i].dataCells;
         csv += "\n";
         csv += "\"";
-        csv += arrayFromKey(cells, "label").join("\",\"");
+        var dataRow = [];
+        for (var col = 0; col < cells.length; col++) {
+            var cell = cells[col];
+            var value = cell.value;
+            if (_.isObject(value)) {
+                value = cell.value.amount;
+            }
+            if (_.isNull(value)) {
+                value = '';
+            }
+            dataRow[col] = value;
+        }
+        csv += dataRow.join("\",\"");
         csv += "\"";
     }
     //console.log(csv);
