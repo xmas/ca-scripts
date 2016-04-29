@@ -283,7 +283,15 @@ function evalInsight(store, group, path, report, level, count, counts, callback)
         var node = {};
         node.label = detailInfo.label;
         node.databaseName = cols[i].replace(/\W+/g, "_");
+
         node.type = detailInfo.dataType;
+        if (node.type === 'picklist') {
+            node.type = 'string';
+        }
+        if (node.type === 'currency') {
+            node.type = 'number';
+        }
+
 
 
         schemata_headers.push(node);
