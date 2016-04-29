@@ -37,24 +37,28 @@ function appendData (tableId, objectName, callback) {
     });
 }
 
-
-function upsertTable(tableData, callback) {
-
-    console.log('upserting data');
+function tableIdForName(tableName, callback) {
 
     getTables( function (currentTables) {
         var existingTableId = -1;
         for (var i = 0; i < currentTables.length; i++) {
             //console.log('test current tables: '+currentTables[i].id+ ' '+currentTables[i].name);
-            if (currentTables[i].name === tableData.name) {
+            if (currentTables[i].name === tableName) {
                 existingTableId = currentTables[i].id;
+                callback(existingTableId);
                 break;
             }
         }
-        console.log('current table found: '+existingTableId);
+        callback(existingTableId);
+    });
+}
 
-        console.log('test current tables: '+currentTables[i].id+ ' '+currentTables[i].name);
 
+function upsertTable(tableData, callback) {
+
+    console.log('upserting data');
+
+    tableIdForName( tableData.name, function(existingTableId) {
 
         if (existingTableId > 0) {
             // update existing
@@ -68,6 +72,7 @@ function upsertTable(tableData, callback) {
             //console.log('create new table from: '+JSON.stringify(tableData, null, 4));
             createTable(tableData, function(response) {
                 console.log('callback for new');
+                console.log(response);
 
                 var table = JSON.parse(response);
                 callback(table.id, response);
@@ -76,6 +81,47 @@ function upsertTable(tableData, callback) {
     });
 
 }
+
+function tableHeaders (tableName, tableId, callback) {
+
+    var options = { method: 'GET',
+    url: 'http://54.186.202.81:8080/table/show/1282'
+}
+
+    request(options, function (error, response, body) {
+        if (error) throw new Error(error);
+
+        console.log(body);
+    });
+}
+
+// function allQueryForTable (tableId, tableName, callback) {
+//
+//     getTables( function (currentTables) {
+//         var existingTableId = -1;
+//         for (var i = 0; i < currentTables.length; i++) {
+//             //console.log('test current tables: '+currentTables[i].id+ ' '+currentTables[i].name);
+//             if (currentTables[i].name === tableData.name) {
+//                 existingTableId = currentTables[i].id;
+//                 break;
+//             }
+//         }
+//
+//
+//     var options = { method: 'POST',
+//         url: baseurl+'/table/create',
+//         body: JSON.stringify(tableData)
+//     };
+//
+//     request(options, function (error, response, body) {
+//         if (error) throw new Error(error);
+//
+//         console.log('Created a new table w/ Schemata: '+tableData.name);
+//         // console.log(response);
+//         // console.log(body);
+//         callback('new table created: '+body);
+//     });
+// }
 
 function createTable (tableData, callback) {
 
